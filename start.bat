@@ -25,9 +25,21 @@ if %ERRORLEVEL% neq 0 (
     pause
     exit /b 1
 )
+
+echo Waiting for Grafana to be ready...
+set /a count=0
+:wait_grafana
+timeout /t 3 /nobreak >nul
+set /a count+=3
+curl -s -o nul -w "%%{http_code}" http://localhost:3000/api/health | findstr "200" >nul 2>&1
+if %ERRORLEVEL% equ 0 goto grafana_ready
+if %count% lss 60 goto wait_grafana
+echo Grafana did not respond in time. Opening anyway...
+
+:grafana_ready
 echo.
 echo Started successfully.
-echo   Grafana : http://localhost:3000  (admin / admin)
-echo   API     : http://localhost:8000/docs
+echo   Dashboard: http://localhost:3000/d/daytrade-v1
+echo   API      : http://localhost:8000/docs
 echo.
-start http://localhost:3000
+start http://localhost:3000/d/daytrade-v1
