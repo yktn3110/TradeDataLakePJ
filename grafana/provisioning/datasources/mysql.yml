@@ -1,0 +1,17 @@
+apiVersion: 1
+
+datasources:
+  - name: TradeDB
+    uid: trade-mysql
+    type: mysql
+    url: mysql:3306
+    database: tradedb
+    user: tradeuser
+    secureJsonData:
+      password: your_password
+    jsonData:
+      maxOpenConns: 10
+      maxIdleConns: 10
+      connMaxLifetime: 14400
+      timezone: Asia/Tokyo
+    isDefault: true

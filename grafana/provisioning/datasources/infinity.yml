@@ -1,0 +1,15 @@
+apiVersion: 1
+
+datasources:
+  - name: Infinity
+    type: yesoreyeram-infinity-datasource
+    uid: infinity
+    access: proxy
+    url: http://api:8000
+    isDefault: false
+    jsonData:
+      allowed_hosts:
+        - api:8000
+      httpHeaderName1: "User-Agent"
+    secureJsonData:
+      httpHeaderValue1: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
