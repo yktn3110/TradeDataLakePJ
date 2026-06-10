@@ -74,9 +74,9 @@ async def get_ohlcv(code: str, date: str):
         if any(x is None for x in [o, h, l, c]):
             continue
         dt_shifted = datetime.fromtimestamp(ts, JST) + shift
-        ts_ms = int(dt_shifted.astimezone(UTC).timestamp() * 1000)
+        time_str = dt_shifted.astimezone(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
         rows.append({
-            "time": ts_ms,
+            "time": time_str,
             "open": round(o, 1),
             "high": round(h, 1),
             "low": round(l, 1),
