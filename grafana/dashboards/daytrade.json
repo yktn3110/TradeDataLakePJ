@@ -5,7 +5,7 @@
   "tags": ["daytrade"],
   "timezone": "Asia/Tokyo",
   "schemaVersion": 38,
-  "version": 30,
+  "version": 31,
   "refresh": "",
   "graphTooltip": 1,
   "time": {"from": "now/d+9h", "to": "now/d-8h"},
@@ -140,14 +140,28 @@
           "unit": "locale",
           "custom": {"drawStyle": "line", "lineInterpolation": "smooth", "lineWidth": 3, "fillOpacity": 20, "gradientMode": "opacity", "showPoints": "always", "pointSize": 6}
         },
-        "overrides": [{"matcher": {"id": "byName", "options": "cum_pnl"}, "properties": [
-          {"id": "displayName", "value": "累計損益"},
-          {"id": "thresholds", "value": {"mode": "absolute", "steps": [{"color": "#f2495c", "value": null}, {"color": "#73bf69", "value": 0}]}},
-          {"id": "color", "value": {"mode": "thresholds"}}
-        ]}]
+        "overrides": [
+          {"matcher": {"id": "byName", "options": "cum_pnl"}, "properties": [
+            {"id": "displayName", "value": "累計損益"},
+            {"id": "thresholds", "value": {"mode": "absolute", "steps": [{"color": "#f2495c", "value": null}, {"color": "#73bf69", "value": 0}]}},
+            {"id": "color", "value": {"mode": "thresholds"}}
+          ]},
+          {"matcher": {"id": "byName", "options": "損益"}, "properties": [
+            {"id": "displayName", "value": "損益"},
+            {"id": "custom.drawStyle", "value": "bars"},
+            {"id": "custom.fillOpacity", "value": 80},
+            {"id": "custom.lineWidth", "value": 0},
+            {"id": "custom.axisPlacement", "value": "right"},
+            {"id": "thresholds", "value": {"mode": "absolute", "steps": [{"color": "#f2495c", "value": null}, {"color": "#73bf69", "value": 0}]}},
+            {"id": "color", "value": {"mode": "thresholds"}}
+          ]}
+        ]
       },
-      "options": {"tooltip": {"mode": "single"}, "legend": {"displayMode": "list", "placement": "bottom"}},
-      "targets": [{"datasource": {"type": "mysql", "uid": "trade-mysql"}, "format": "time_series", "rawSql": "SELECT CONVERT_TZ(exit_at, '+09:00', '+00:00') + INTERVAL DATEDIFF(DATE(DATE_ADD(UTC_TIMESTAMP(), INTERVAL 9 HOUR)), '$trade_date') DAY AS time, SUM(pnl) OVER (ORDER BY exit_at ROWS UNBOUNDED PRECEDING) AS cum_pnl FROM daytrades WHERE trade_date = '$trade_date' AND stock_code IN ($stock_code) AND ('$side' = 'All' OR side = '$side') ORDER BY exit_at", "refId": "A"}]
+      "options": {"tooltip": {"mode": "multi"}, "legend": {"displayMode": "list", "placement": "bottom"}},
+      "targets": [
+        {"datasource": {"type": "mysql", "uid": "trade-mysql"}, "format": "time_series", "rawSql": "SELECT CONVERT_TZ(exit_at, '+09:00', '+00:00') + INTERVAL DATEDIFF(DATE(DATE_ADD(UTC_TIMESTAMP(), INTERVAL 9 HOUR)), '$trade_date') DAY AS time, SUM(pnl) OVER (ORDER BY exit_at ROWS UNBOUNDED PRECEDING) AS cum_pnl FROM daytrades WHERE trade_date = '$trade_date' AND stock_code IN ($stock_code) AND ('$side' = 'All' OR side = '$side') ORDER BY exit_at", "refId": "A"},
+        {"datasource": {"type": "mysql", "uid": "trade-mysql"}, "format": "time_series", "rawSql": "SELECT CONVERT_TZ(exit_at, '+09:00', '+00:00') + INTERVAL DATEDIFF(DATE(DATE_ADD(UTC_TIMESTAMP(), INTERVAL 9 HOUR)), '$trade_date') DAY AS time, pnl AS 損益 FROM daytrades WHERE trade_date = '$trade_date' AND stock_code IN ($stock_code) AND ('$side' = 'All' OR side = '$side') ORDER BY exit_at", "refId": "B"}
+      ]
     },
     {
       "id": 104, "type": "row", "title": "チャート分析",
