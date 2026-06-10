@@ -5,7 +5,7 @@
   "tags": ["daytrade"],
   "timezone": "Asia/Tokyo",
   "schemaVersion": 38,
-  "version": 7,
+  "version": 8,
   "refresh": "",
   "graphTooltip": 1,
   "time": {"from": "now/d+9h", "to": "now/d-8h"},
@@ -13,10 +13,23 @@
     "list": [
       {
         "type": "query",
+        "name": "trade_date",
+        "label": "日付",
+        "datasource": {"type": "mysql", "uid": "trade-mysql"},
+        "query": "SELECT DISTINCT DATE_FORMAT(trade_date, '%Y-%m-%d') AS trade_date FROM daytrades ORDER BY trade_date DESC",
+        "current": {},
+        "multi": false,
+        "includeAll": false,
+        "refresh": 2,
+        "sort": 0,
+        "hide": 0
+      },
+      {
+        "type": "query",
         "name": "stock_code",
         "label": "銘柄",
         "datasource": {"type": "mysql", "uid": "trade-mysql"},
-        "query": "SELECT stock_name AS __text, stock_code AS __value FROM (SELECT DISTINCT stock_code, stock_name FROM daytrades) t ORDER BY stock_code",
+        "query": "SELECT stock_name AS __text, stock_code AS __value FROM (SELECT DISTINCT stock_code, stock_name FROM daytrades WHERE trade_date = '$trade_date') t ORDER BY stock_code",
         "current": {},
         "multi": true,
         "includeAll": true,
@@ -57,7 +70,7 @@
       "datasource": {"type": "mysql", "uid": "trade-mysql"},
       "fieldConfig": {"defaults": {"unit": "locale", "color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"color": "#f2495c", "value": null}, {"color": "#73bf69", "value": 0}]}}},
       "options": {"colorMode": "value", "graphMode": "none", "reduceOptions": {"calcs": ["lastNotNull"]}},
-      "targets": [{"datasource": {"type": "mysql", "uid": "trade-mysql"}, "format": "table", "rawSql": "SELECT SUM(pnl) AS value FROM daytrades WHERE trade_date BETWEEN '${__from:date:YYYY-MM-DD}' AND '${__to:date:YYYY-MM-DD}' AND stock_code IN ($stock_code) AND ('$side' = 'All' OR side = '$side')", "refId": "A"}]
+      "targets": [{"datasource": {"type": "mysql", "uid": "trade-mysql"}, "format": "table", "rawSql": "SELECT SUM(pnl) AS value FROM daytrades WHERE trade_date = '$trade_date' AND stock_code IN ($stock_code) AND ('$side' = 'All' OR side = '$side')", "refId": "A"}]
     },
     {
       "id": 2, "type": "stat", "title": "トレード数",
@@ -65,7 +78,7 @@
       "datasource": {"type": "mysql", "uid": "trade-mysql"},
       "fieldConfig": {"defaults": {"unit": "short", "color": {"fixedColor": "#5794f2", "mode": "fixed"}}},
       "options": {"colorMode": "value", "graphMode": "none", "reduceOptions": {"calcs": ["lastNotNull"]}},
-      "targets": [{"datasource": {"type": "mysql", "uid": "trade-mysql"}, "format": "table", "rawSql": "SELECT COUNT(*) AS value FROM daytrades WHERE trade_date BETWEEN '${__from:date:YYYY-MM-DD}' AND '${__to:date:YYYY-MM-DD}' AND stock_code IN ($stock_code) AND ('$side' = 'All' OR side = '$side')", "refId": "A"}]
+      "targets": [{"datasource": {"type": "mysql", "uid": "trade-mysql"}, "format": "table", "rawSql": "SELECT COUNT(*) AS value FROM daytrades WHERE trade_date = '$trade_date' AND stock_code IN ($stock_code) AND ('$side' = 'All' OR side = '$side')", "refId": "A"}]
     },
     {
       "id": 3, "type": "stat", "title": "勝率",
@@ -73,7 +86,7 @@
       "datasource": {"type": "mysql", "uid": "trade-mysql"},
       "fieldConfig": {"defaults": {"unit": "percent", "color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"color": "#f2495c", "value": null}, {"color": "#ff9830", "value": 50}, {"color": "#73bf69", "value": 60}]}}},
       "options": {"colorMode": "value", "graphMode": "none", "reduceOptions": {"calcs": ["lastNotNull"]}},
-      "targets": [{"datasource": {"type": "mysql", "uid": "trade-mysql"}, "format": "table", "rawSql": "SELECT ROUND(100.0 * SUM(CASE WHEN pnl > 0 THEN 1 ELSE 0 END) / COUNT(*), 1) AS value FROM daytrades WHERE trade_date BETWEEN '${__from:date:YYYY-MM-DD}' AND '${__to:date:YYYY-MM-DD}' AND stock_code IN ($stock_code) AND ('$side' = 'All' OR side = '$side')", "refId": "A"}]
+      "targets": [{"datasource": {"type": "mysql", "uid": "trade-mysql"}, "format": "table", "rawSql": "SELECT ROUND(100.0 * SUM(CASE WHEN pnl > 0 THEN 1 ELSE 0 END) / COUNT(*), 1) AS value FROM daytrades WHERE trade_date = '$trade_date' AND stock_code IN ($stock_code) AND ('$side' = 'All' OR side = '$side')", "refId": "A"}]
     },
     {
       "id": 4, "type": "stat", "title": "プロフィットファクター",
@@ -81,7 +94,7 @@
       "datasource": {"type": "mysql", "uid": "trade-mysql"},
       "fieldConfig": {"defaults": {"decimals": 2, "color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"color": "#f2495c", "value": null}, {"color": "#ff9830", "value": 1}, {"color": "#73bf69", "value": 1.5}]}}},
       "options": {"colorMode": "value", "graphMode": "none", "reduceOptions": {"calcs": ["lastNotNull"]}},
-      "targets": [{"datasource": {"type": "mysql", "uid": "trade-mysql"}, "format": "table", "rawSql": "SELECT ROUND(SUM(CASE WHEN pnl > 0 THEN pnl ELSE 0 END) / NULLIF(ABS(SUM(CASE WHEN pnl < 0 THEN pnl ELSE 0 END)), 0), 2) AS value FROM daytrades WHERE trade_date BETWEEN '${__from:date:YYYY-MM-DD}' AND '${__to:date:YYYY-MM-DD}' AND stock_code IN ($stock_code) AND ('$side' = 'All' OR side = '$side')", "refId": "A"}]
+      "targets": [{"datasource": {"type": "mysql", "uid": "trade-mysql"}, "format": "table", "rawSql": "SELECT ROUND(SUM(CASE WHEN pnl > 0 THEN pnl ELSE 0 END) / NULLIF(ABS(SUM(CASE WHEN pnl < 0 THEN pnl ELSE 0 END)), 0), 2) AS value FROM daytrades WHERE trade_date = '$trade_date' AND stock_code IN ($stock_code) AND ('$side' = 'All' OR side = '$side')", "refId": "A"}]
     },
     {
       "id": 5, "type": "stat", "title": "平均利益",
@@ -89,7 +102,7 @@
       "datasource": {"type": "mysql", "uid": "trade-mysql"},
       "fieldConfig": {"defaults": {"unit": "locale", "color": {"fixedColor": "#73bf69", "mode": "fixed"}}},
       "options": {"colorMode": "value", "graphMode": "none", "reduceOptions": {"calcs": ["lastNotNull"]}},
-      "targets": [{"datasource": {"type": "mysql", "uid": "trade-mysql"}, "format": "table", "rawSql": "SELECT ROUND(AVG(pnl)) AS value FROM daytrades WHERE pnl > 0 AND trade_date BETWEEN '${__from:date:YYYY-MM-DD}' AND '${__to:date:YYYY-MM-DD}' AND stock_code IN ($stock_code) AND ('$side' = 'All' OR side = '$side')", "refId": "A"}]
+      "targets": [{"datasource": {"type": "mysql", "uid": "trade-mysql"}, "format": "table", "rawSql": "SELECT ROUND(AVG(pnl)) AS value FROM daytrades WHERE pnl > 0 AND trade_date = '$trade_date' AND stock_code IN ($stock_code) AND ('$side' = 'All' OR side = '$side')", "refId": "A"}]
     },
     {
       "id": 6, "type": "stat", "title": "平均損失",
@@ -97,7 +110,7 @@
       "datasource": {"type": "mysql", "uid": "trade-mysql"},
       "fieldConfig": {"defaults": {"unit": "locale", "color": {"fixedColor": "#f2495c", "mode": "fixed"}}},
       "options": {"colorMode": "value", "graphMode": "none", "reduceOptions": {"calcs": ["lastNotNull"]}},
-      "targets": [{"datasource": {"type": "mysql", "uid": "trade-mysql"}, "format": "table", "rawSql": "SELECT ROUND(AVG(pnl)) AS value FROM daytrades WHERE pnl < 0 AND trade_date BETWEEN '${__from:date:YYYY-MM-DD}' AND '${__to:date:YYYY-MM-DD}' AND stock_code IN ($stock_code) AND ('$side' = 'All' OR side = '$side')", "refId": "A"}]
+      "targets": [{"datasource": {"type": "mysql", "uid": "trade-mysql"}, "format": "table", "rawSql": "SELECT ROUND(AVG(pnl)) AS value FROM daytrades WHERE pnl < 0 AND trade_date = '$trade_date' AND stock_code IN ($stock_code) AND ('$side' = 'All' OR side = '$side')", "refId": "A"}]
     },
     {
       "id": 101, "type": "row", "title": "時系列分析",
@@ -120,7 +133,7 @@
         ]}]
       },
       "options": {"tooltip": {"mode": "single"}, "legend": {"displayMode": "list", "placement": "bottom"}},
-      "targets": [{"datasource": {"type": "mysql", "uid": "trade-mysql"}, "format": "time_series", "rawSql": "SELECT CONVERT_TZ(entry_at, '+09:00', '+00:00') AS time, SUM(pnl) OVER (ORDER BY entry_at ROWS UNBOUNDED PRECEDING) AS cum_pnl FROM daytrades WHERE trade_date BETWEEN '${__from:date:YYYY-MM-DD}' AND '${__to:date:YYYY-MM-DD}' AND stock_code IN ($stock_code) AND ('$side' = 'All' OR side = '$side') ORDER BY entry_at", "refId": "A"}]
+      "targets": [{"datasource": {"type": "mysql", "uid": "trade-mysql"}, "format": "time_series", "rawSql": "SELECT CONVERT_TZ(entry_at, '+09:00', '+00:00') + INTERVAL DATEDIFF(DATE(DATE_ADD(UTC_TIMESTAMP(), INTERVAL 9 HOUR)), '$trade_date') DAY AS time, SUM(pnl) OVER (ORDER BY entry_at ROWS UNBOUNDED PRECEDING) AS cum_pnl FROM daytrades WHERE trade_date = '$trade_date' AND stock_code IN ($stock_code) AND ('$side' = 'All' OR side = '$side') ORDER BY entry_at", "refId": "A"}]
     },
     {
       "id": 102, "type": "row", "title": "銘柄・種別分析",
@@ -140,7 +153,7 @@
         ]}]
       },
       "options": {"xField": "銘柄", "orientation": "horizontal", "groupWidth": 0.7, "barWidth": 0.8, "tooltip": {"mode": "single"}},
-      "targets": [{"datasource": {"type": "mysql", "uid": "trade-mysql"}, "format": "table", "rawSql": "SELECT CONCAT(stock_code, ' ', stock_name) AS 銘柄, SUM(pnl) AS 損益 FROM daytrades WHERE trade_date BETWEEN '${__from:date:YYYY-MM-DD}' AND '${__to:date:YYYY-MM-DD}' AND stock_code IN ($stock_code) AND ('$side' = 'All' OR side = '$side') GROUP BY stock_code, stock_name ORDER BY 損益 DESC LIMIT 20", "refId": "A"}]
+      "targets": [{"datasource": {"type": "mysql", "uid": "trade-mysql"}, "format": "table", "rawSql": "SELECT CONCAT(stock_code, ' ', stock_name) AS 銘柄, SUM(pnl) AS 損益 FROM daytrades WHERE trade_date = '$trade_date' AND stock_code IN ($stock_code) AND ('$side' = 'All' OR side = '$side') GROUP BY stock_code, stock_name ORDER BY 損益 DESC LIMIT 20", "refId": "A"}]
     },
     {
       "id": 9, "type": "barchart", "title": "取引方向別損益（LONG / SHORT）",
@@ -155,7 +168,7 @@
         ]}]
       },
       "options": {"xField": "取引方向", "orientation": "auto", "groupWidth": 0.7, "barWidth": 0.6, "tooltip": {"mode": "single"}},
-      "targets": [{"datasource": {"type": "mysql", "uid": "trade-mysql"}, "format": "table", "rawSql": "SELECT side AS 取引方向, SUM(pnl) AS 損益 FROM daytrades WHERE trade_date BETWEEN '${__from:date:YYYY-MM-DD}' AND '${__to:date:YYYY-MM-DD}' AND stock_code IN ($stock_code) AND ('$side' = 'All' OR side = '$side') GROUP BY side ORDER BY 損益 DESC", "refId": "A"}]
+      "targets": [{"datasource": {"type": "mysql", "uid": "trade-mysql"}, "format": "table", "rawSql": "SELECT side AS 取引方向, SUM(pnl) AS 損益 FROM daytrades WHERE trade_date = '$trade_date' AND stock_code IN ($stock_code) AND ('$side' = 'All' OR side = '$side') GROUP BY side ORDER BY 損益 DESC", "refId": "A"}]
     },
     {
       "id": 10, "type": "barchart", "title": "保有時間分布",
@@ -170,7 +183,7 @@
         ]}]
       },
       "options": {"xField": "保有時間", "orientation": "auto", "groupWidth": 0.7, "barWidth": 0.8, "tooltip": {"mode": "single"}},
-      "targets": [{"datasource": {"type": "mysql", "uid": "trade-mysql"}, "format": "table", "rawSql": "SELECT CASE WHEN duration_sec < 60 THEN '1分未満' WHEN duration_sec < 300 THEN '1-5分' WHEN duration_sec < 900 THEN '5-15分' WHEN duration_sec < 1800 THEN '15-30分' WHEN duration_sec < 3600 THEN '30-60分' ELSE '1時間超' END AS 保有時間, COUNT(*) AS 件数 FROM daytrades WHERE trade_date BETWEEN '${__from:date:YYYY-MM-DD}' AND '${__to:date:YYYY-MM-DD}' AND stock_code IN ($stock_code) AND ('$side' = 'All' OR side = '$side') GROUP BY 保有時間 ORDER BY MIN(duration_sec)", "refId": "A"}]
+      "targets": [{"datasource": {"type": "mysql", "uid": "trade-mysql"}, "format": "table", "rawSql": "SELECT CASE WHEN duration_sec < 60 THEN '1分未満' WHEN duration_sec < 300 THEN '1-5分' WHEN duration_sec < 900 THEN '5-15分' WHEN duration_sec < 1800 THEN '15-30分' WHEN duration_sec < 3600 THEN '30-60分' ELSE '1時間超' END AS 保有時間, COUNT(*) AS 件数 FROM daytrades WHERE trade_date = '$trade_date' AND stock_code IN ($stock_code) AND ('$side' = 'All' OR side = '$side') GROUP BY 保有時間 ORDER BY MIN(duration_sec)", "refId": "A"}]
     },
     {
       "id": 103, "type": "row", "title": "トレード明細",
@@ -198,7 +211,7 @@
         ]
       },
       "options": {"sortBy": [{"desc": true, "displayName": "エントリー"}], "footer": {"show": false}},
-      "targets": [{"datasource": {"type": "mysql", "uid": "trade-mysql"}, "format": "table", "rawSql": "SELECT trade_date, DATE_FORMAT(entry_at, '%H:%i:%S') AS entry_at, DATE_FORMAT(exit_at, '%H:%i:%S') AS exit_at, duration_sec, stock_code, stock_name, side, quantity, entry_price, exit_price, pnl FROM daytrades WHERE trade_date BETWEEN '${__from:date:YYYY-MM-DD}' AND '${__to:date:YYYY-MM-DD}' AND stock_code IN ($stock_code) AND ('$side' = 'All' OR side = '$side') ORDER BY trade_date DESC, entry_at DESC LIMIT 500", "refId": "A"}]
+      "targets": [{"datasource": {"type": "mysql", "uid": "trade-mysql"}, "format": "table", "rawSql": "SELECT trade_date, DATE_FORMAT(entry_at, '%H:%i:%S') AS entry_at, DATE_FORMAT(exit_at, '%H:%i:%S') AS exit_at, duration_sec, stock_code, stock_name, side, quantity, entry_price, exit_price, pnl FROM daytrades WHERE trade_date = '$trade_date' AND stock_code IN ($stock_code) AND ('$side' = 'All' OR side = '$side') ORDER BY trade_date DESC, entry_at DESC LIMIT 500", "refId": "A"}]
     }
   ]
 }
