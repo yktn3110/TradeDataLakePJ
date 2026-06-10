@@ -69,7 +69,8 @@
   },
   "annotations": {"list": []},
   "links": [
-    {"title": "CSVアップロード", "url": "http://localhost:8000", "icon": "external link", "targetBlank": true, "type": "link", "tooltip": "デイトレ xlsx をインポート"}
+    {"title": "CSVアップロード", "url": "http://localhost:8000", "icon": "external link", "targetBlank": true, "type": "link", "tooltip": "デイトレ xlsx をインポート"},
+    {"title": "⏱ 9:00-15:30 リセット", "url": "/d/daytrade-v1?from=now%2Fd%2B9h&to=now%2Fd-8h&orgId=1&timezone=Asia%2FTokyo", "icon": "clock-o", "targetBlank": false, "type": "link", "tooltip": "ズームを 9:00-15:30 にリセット"}
   ],
   "panels": [
     {
@@ -146,7 +147,7 @@
         ]}]
       },
       "options": {"tooltip": {"mode": "single"}, "legend": {"displayMode": "list", "placement": "bottom"}},
-      "targets": [{"datasource": {"type": "mysql", "uid": "trade-mysql"}, "format": "time_series", "rawSql": "SELECT CONVERT_TZ(entry_at, '+09:00', '+00:00') + INTERVAL DATEDIFF(DATE(DATE_ADD(UTC_TIMESTAMP(), INTERVAL 9 HOUR)), '$trade_date') DAY AS time, SUM(pnl) OVER (ORDER BY entry_at ROWS UNBOUNDED PRECEDING) AS cum_pnl FROM daytrades WHERE trade_date = '$trade_date' AND stock_code IN ($stock_code) AND ('$side' = 'All' OR side = '$side') ORDER BY entry_at", "refId": "A"}]
+      "targets": [{"datasource": {"type": "mysql", "uid": "trade-mysql"}, "format": "time_series", "rawSql": "SELECT CONVERT_TZ(exit_at, '+09:00', '+00:00') + INTERVAL DATEDIFF(DATE(DATE_ADD(UTC_TIMESTAMP(), INTERVAL 9 HOUR)), '$trade_date') DAY AS time, SUM(pnl) OVER (ORDER BY exit_at ROWS UNBOUNDED PRECEDING) AS cum_pnl FROM daytrades WHERE trade_date = '$trade_date' AND stock_code IN ($stock_code) AND ('$side' = 'All' OR side = '$side') ORDER BY exit_at", "refId": "A"}]
     },
     {
       "id": 104, "type": "row", "title": "チャート分析",
@@ -156,7 +157,7 @@
     {
       "id": 20, "type": "candlestick", "title": "ローソク足チャート（$chart_code）",
       "gridPos": {"x": 0, "y": 15, "w": 24, "h": 12},
-      "datasource": {"type": "yesoreyeram-infinity-datasource", "uid": "infinity"},
+      "datasource": {"type": "datasource", "uid": "-- Mixed --"},
       "fieldConfig": {
         "defaults": {"unit": "locale"},
         "overrides": [
@@ -165,9 +166,9 @@
             "properties": [
               {"id": "custom.drawStyle", "value": "points"},
               {"id": "custom.showPoints", "value": "always"},
-              {"id": "custom.pointSize", "value": 10},
-              {"id": "color", "value": {"mode": "fixed", "fixedColor": "#73bf69"}},
-              {"id": "displayName", "value": "エントリー"}
+              {"id": "custom.pointSize", "value": 14},
+              {"id": "custom.lineWidth", "value": 0},
+              {"id": "color", "value": {"mode": "fixed", "fixedColor": "#00E090"}}
             ]
           },
           {
@@ -175,22 +176,49 @@
             "properties": [
               {"id": "custom.drawStyle", "value": "points"},
               {"id": "custom.showPoints", "value": "always"},
-              {"id": "custom.pointSize", "value": 10},
-              {"id": "color", "value": {"mode": "fixed", "fixedColor": "#f2495c"}},
-              {"id": "displayName", "value": "エグジット"}
+              {"id": "custom.pointSize", "value": 14},
+              {"id": "custom.lineWidth", "value": 0},
+              {"id": "color", "value": {"mode": "fixed", "fixedColor": "#FF9830"}}
             ]
-          }
+          },
+          {
+            "matcher": {"id": "byName", "options": "株数"},
+            "properties": [
+              {"id": "custom.hideFrom", "value": {"viz": false, "legend": true, "tooltip": false}},
+              {"id": "custom.drawStyle", "value": "points"},
+              {"id": "custom.showPoints", "value": "always"},
+              {"id": "custom.pointSize", "value": 1},
+              {"id": "custom.lineWidth", "value": 0},
+              {"id": "custom.axisPlacement", "value": "hidden"},
+              {"id": "color", "value": {"mode": "fixed", "fixedColor": "transparent"}},
+              {"id": "unit", "value": "short"}
+            ]
+          },
+          {
+            "matcher": {"id": "byName", "options": "損益"},
+            "properties": [
+              {"id": "custom.hideFrom", "value": {"viz": false, "legend": true, "tooltip": false}},
+              {"id": "custom.drawStyle", "value": "points"},
+              {"id": "custom.showPoints", "value": "always"},
+              {"id": "custom.pointSize", "value": 1},
+              {"id": "custom.lineWidth", "value": 0},
+              {"id": "custom.axisPlacement", "value": "hidden"},
+              {"id": "color", "value": {"mode": "fixed", "fixedColor": "transparent"}},
+              {"id": "unit", "value": "locale"}
+            ]
+          },
         ]
       },
       "options": {
         "mode": "candles",
         "candleStyle": "candles",
         "colorStrategy": "open-close",
-        "upColor": "dark-red",
+        "upColor": "red",
         "downColor": "dark-blue",
         "openClosePair": {},
+        "includeAllFields": true,
         "legend": {"displayMode": "list", "placement": "bottom"},
-        "tooltip": {"mode": "single"}
+        "tooltip": {"mode": "multi"}
       },
       "targets": [
         {
@@ -204,7 +232,7 @@
           "format": "table",
           "root_selector": "",
           "columns": [
-            {"selector": "time", "text": "time", "type": "timestamp_epoch_ms"},
+            {"selector": "time", "text": "time", "type": "timestamp"},
             {"selector": "open",  "text": "open",  "type": "number"},
             {"selector": "high",  "text": "high",  "type": "number"},
             {"selector": "low",   "text": "low",   "type": "number"},
@@ -215,13 +243,13 @@
           "datasource": {"type": "mysql", "uid": "trade-mysql"},
           "refId": "B",
           "format": "time_series",
-          "rawSql": "SELECT CONVERT_TZ(entry_at, '+09:00', '+00:00') + INTERVAL DATEDIFF(DATE(DATE_ADD(UTC_TIMESTAMP(), INTERVAL 9 HOUR)), '$trade_date') DAY AS time, entry_price AS エントリー FROM daytrades WHERE trade_date = '$trade_date' AND stock_code = '$chart_code' AND ('$side' = 'All' OR side = '$side') ORDER BY entry_at"
+          "rawSql": "SELECT CONVERT_TZ(entry_at, '+09:00', '+00:00') + INTERVAL DATEDIFF(DATE(DATE_ADD(UTC_TIMESTAMP(), INTERVAL 9 HOUR)), '$trade_date') DAY AS time, entry_price AS エントリー, quantity AS 株数 FROM daytrades WHERE trade_date = '$trade_date' AND stock_code = '$chart_code' AND ('$side' = 'All' OR side = '$side') ORDER BY entry_at"
         },
         {
           "datasource": {"type": "mysql", "uid": "trade-mysql"},
           "refId": "C",
           "format": "time_series",
-          "rawSql": "SELECT CONVERT_TZ(exit_at, '+09:00', '+00:00') + INTERVAL DATEDIFF(DATE(DATE_ADD(UTC_TIMESTAMP(), INTERVAL 9 HOUR)), '$trade_date') DAY AS time, exit_price AS エグジット FROM daytrades WHERE trade_date = '$trade_date' AND stock_code = '$chart_code' AND ('$side' = 'All' OR side = '$side') ORDER BY exit_at"
+          "rawSql": "SELECT CONVERT_TZ(exit_at, '+09:00', '+00:00') + INTERVAL DATEDIFF(DATE(DATE_ADD(UTC_TIMESTAMP(), INTERVAL 9 HOUR)), '$trade_date') DAY AS time, exit_price AS エグジット, quantity AS 株数, pnl AS 損益 FROM daytrades WHERE trade_date = '$trade_date' AND stock_code = '$chart_code' AND ('$side' = 'All' OR side = '$side') ORDER BY exit_at"
         }
       ]
     },
