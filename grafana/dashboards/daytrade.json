@@ -5,7 +5,7 @@
   "tags": ["daytrade"],
   "timezone": "Asia/Tokyo",
   "schemaVersion": 38,
-  "version": 8,
+  "version": 9,
   "refresh": "",
   "graphTooltip": 1,
   "time": {"from": "now/d+9h", "to": "now/d-8h"},
@@ -50,6 +50,19 @@
         "current": {"text": "All", "value": "All"},
         "multi": false,
         "includeAll": false,
+        "hide": 0
+      },
+      {
+        "type": "query",
+        "name": "chart_code",
+        "label": "チャート銘柄",
+        "datasource": {"type": "mysql", "uid": "trade-mysql"},
+        "query": "SELECT CONCAT(stock_code, ' ', stock_name) AS __text, stock_code AS __value FROM (SELECT DISTINCT stock_code, stock_name FROM daytrades WHERE trade_date = '$trade_date') t ORDER BY stock_code",
+        "current": {},
+        "multi": false,
+        "includeAll": false,
+        "refresh": 2,
+        "sort": 1,
         "hide": 0
       }
     ]
@@ -136,13 +149,90 @@
       "targets": [{"datasource": {"type": "mysql", "uid": "trade-mysql"}, "format": "time_series", "rawSql": "SELECT CONVERT_TZ(entry_at, '+09:00', '+00:00') + INTERVAL DATEDIFF(DATE(DATE_ADD(UTC_TIMESTAMP(), INTERVAL 9 HOUR)), '$trade_date') DAY AS time, SUM(pnl) OVER (ORDER BY entry_at ROWS UNBOUNDED PRECEDING) AS cum_pnl FROM daytrades WHERE trade_date = '$trade_date' AND stock_code IN ($stock_code) AND ('$side' = 'All' OR side = '$side') ORDER BY entry_at", "refId": "A"}]
     },
     {
-      "id": 102, "type": "row", "title": "銘柄・種別分析",
+      "id": 104, "type": "row", "title": "チャート分析",
       "gridPos": {"x": 0, "y": 14, "w": 24, "h": 1},
       "collapsed": false, "panels": []
     },
     {
+      "id": 20, "type": "candlestick", "title": "ローソク足チャート（$chart_code）",
+      "gridPos": {"x": 0, "y": 15, "w": 24, "h": 12},
+      "datasource": {"type": "yesoreyeram-infinity-datasource", "uid": "infinity"},
+      "fieldConfig": {
+        "defaults": {"unit": "locale"},
+        "overrides": [
+          {
+            "matcher": {"id": "byName", "options": "エントリー"},
+            "properties": [
+              {"id": "custom.drawStyle", "value": "points"},
+              {"id": "custom.showPoints", "value": "always"},
+              {"id": "custom.pointSize", "value": 10},
+              {"id": "color", "value": {"mode": "fixed", "fixedColor": "#73bf69"}},
+              {"id": "displayName", "value": "エントリー"}
+            ]
+          },
+          {
+            "matcher": {"id": "byName", "options": "エグジット"},
+            "properties": [
+              {"id": "custom.drawStyle", "value": "points"},
+              {"id": "custom.showPoints", "value": "always"},
+              {"id": "custom.pointSize", "value": 10},
+              {"id": "color", "value": {"mode": "fixed", "fixedColor": "#f2495c"}},
+              {"id": "displayName", "value": "エグジット"}
+            ]
+          }
+        ]
+      },
+      "options": {
+        "mode": "candles",
+        "candleStyle": "candles",
+        "colorStrategy": "open-close",
+        "upColor": "dark-red",
+        "downColor": "dark-blue",
+        "openClosePair": {},
+        "legend": {"displayMode": "list", "placement": "bottom"},
+        "tooltip": {"mode": "single"}
+      },
+      "targets": [
+        {
+          "datasource": {"type": "yesoreyeram-infinity-datasource", "uid": "infinity"},
+          "refId": "A",
+          "type": "json",
+          "source": "url",
+          "url": "http://api:8000/api/ohlcv?code=${chart_code}&date=${trade_date}",
+          "url_options": {"method": "GET", "data": ""},
+          "parser": "backend",
+          "format": "table",
+          "root_selector": "",
+          "columns": [
+            {"selector": "time", "text": "time", "type": "timestamp_epoch_ms"},
+            {"selector": "open",  "text": "open",  "type": "number"},
+            {"selector": "high",  "text": "high",  "type": "number"},
+            {"selector": "low",   "text": "low",   "type": "number"},
+            {"selector": "close", "text": "close", "type": "number"}
+          ]
+        },
+        {
+          "datasource": {"type": "mysql", "uid": "trade-mysql"},
+          "refId": "B",
+          "format": "time_series",
+          "rawSql": "SELECT CONVERT_TZ(entry_at, '+09:00', '+00:00') + INTERVAL DATEDIFF(DATE(DATE_ADD(UTC_TIMESTAMP(), INTERVAL 9 HOUR)), '$trade_date') DAY AS time, entry_price AS エントリー FROM daytrades WHERE trade_date = '$trade_date' AND stock_code = '$chart_code' AND ('$side' = 'All' OR side = '$side') ORDER BY entry_at"
+        },
+        {
+          "datasource": {"type": "mysql", "uid": "trade-mysql"},
+          "refId": "C",
+          "format": "time_series",
+          "rawSql": "SELECT CONVERT_TZ(exit_at, '+09:00', '+00:00') + INTERVAL DATEDIFF(DATE(DATE_ADD(UTC_TIMESTAMP(), INTERVAL 9 HOUR)), '$trade_date') DAY AS time, exit_price AS エグジット FROM daytrades WHERE trade_date = '$trade_date' AND stock_code = '$chart_code' AND ('$side' = 'All' OR side = '$side') ORDER BY exit_at"
+        }
+      ]
+    },
+    {
+      "id": 102, "type": "row", "title": "銘柄・種別分析",
+      "gridPos": {"x": 0, "y": 27, "w": 24, "h": 1},
+      "collapsed": false, "panels": []
+    },
+    {
       "id": 8, "type": "barchart", "title": "銘柄別損益",
-      "gridPos": {"x": 0, "y": 15, "w": 12, "h": 9},
+      "gridPos": {"x": 0, "y": 28, "w": 12, "h": 9},
       "datasource": {"type": "mysql", "uid": "trade-mysql"},
       "fieldConfig": {
         "defaults": {"unit": "locale"},
@@ -157,7 +247,7 @@
     },
     {
       "id": 9, "type": "barchart", "title": "取引方向別損益（LONG / SHORT）",
-      "gridPos": {"x": 12, "y": 15, "w": 6, "h": 9},
+      "gridPos": {"x": 12, "y": 28, "w": 6, "h": 9},
       "datasource": {"type": "mysql", "uid": "trade-mysql"},
       "fieldConfig": {
         "defaults": {"unit": "locale"},
@@ -172,7 +262,7 @@
     },
     {
       "id": 10, "type": "barchart", "title": "保有時間分布",
-      "gridPos": {"x": 18, "y": 15, "w": 6, "h": 9},
+      "gridPos": {"x": 18, "y": 28, "w": 6, "h": 9},
       "datasource": {"type": "mysql", "uid": "trade-mysql"},
       "fieldConfig": {
         "defaults": {"unit": "short"},
@@ -187,12 +277,12 @@
     },
     {
       "id": 103, "type": "row", "title": "トレード明細",
-      "gridPos": {"x": 0, "y": 24, "w": 24, "h": 1},
+      "gridPos": {"x": 0, "y": 37, "w": 24, "h": 1},
       "collapsed": false, "panels": []
     },
     {
       "id": 11, "type": "table", "title": "トレード明細",
-      "gridPos": {"x": 0, "y": 25, "w": 24, "h": 10},
+      "gridPos": {"x": 0, "y": 38, "w": 24, "h": 10},
       "datasource": {"type": "mysql", "uid": "trade-mysql"},
       "fieldConfig": {
         "defaults": {"custom": {"align": "auto"}},

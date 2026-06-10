@@ -5,8 +5,10 @@ import httpx
 
 from importer import run_import
 from daytrade_importer import run_daytrade_import
+from chart_router import router as chart_router
 
 app = FastAPI()
+app.include_router(chart_router)
 templates = Jinja2Templates(directory="templates")
 
 
