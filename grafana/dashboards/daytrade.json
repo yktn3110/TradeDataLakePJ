@@ -5,7 +5,7 @@
   "tags": ["daytrade"],
   "timezone": "Asia/Tokyo",
   "schemaVersion": 38,
-  "version": 31,
+  "version": 32,
   "refresh": "",
   "graphTooltip": 1,
   "time": {"from": "now/d+9h", "to": "now/d-8h"},
@@ -146,21 +146,26 @@
             {"id": "thresholds", "value": {"mode": "absolute", "steps": [{"color": "#f2495c", "value": null}, {"color": "#73bf69", "value": 0}]}},
             {"id": "color", "value": {"mode": "thresholds"}}
           ]},
-          {"matcher": {"id": "byName", "options": "損益"}, "properties": [
-            {"id": "displayName", "value": "損益"},
+          {"matcher": {"id": "byName", "options": "利益"}, "properties": [
             {"id": "custom.drawStyle", "value": "bars"},
             {"id": "custom.fillOpacity", "value": 80},
             {"id": "custom.lineWidth", "value": 0},
             {"id": "custom.axisPlacement", "value": "right"},
-            {"id": "thresholds", "value": {"mode": "absolute", "steps": [{"color": "#f2495c", "value": null}, {"color": "#73bf69", "value": 0}]}},
-            {"id": "color", "value": {"mode": "thresholds"}}
+            {"id": "color", "value": {"mode": "fixed", "fixedColor": "#73bf69"}}
+          ]},
+          {"matcher": {"id": "byName", "options": "損失"}, "properties": [
+            {"id": "custom.drawStyle", "value": "bars"},
+            {"id": "custom.fillOpacity", "value": 80},
+            {"id": "custom.lineWidth", "value": 0},
+            {"id": "custom.axisPlacement", "value": "right"},
+            {"id": "color", "value": {"mode": "fixed", "fixedColor": "#f2495c"}}
           ]}
         ]
       },
       "options": {"tooltip": {"mode": "multi"}, "legend": {"displayMode": "list", "placement": "bottom"}},
       "targets": [
         {"datasource": {"type": "mysql", "uid": "trade-mysql"}, "format": "time_series", "rawSql": "SELECT CONVERT_TZ(exit_at, '+09:00', '+00:00') + INTERVAL DATEDIFF(DATE(DATE_ADD(UTC_TIMESTAMP(), INTERVAL 9 HOUR)), '$trade_date') DAY AS time, SUM(pnl) OVER (ORDER BY exit_at ROWS UNBOUNDED PRECEDING) AS cum_pnl FROM daytrades WHERE trade_date = '$trade_date' AND stock_code IN ($stock_code) AND ('$side' = 'All' OR side = '$side') ORDER BY exit_at", "refId": "A"},
-        {"datasource": {"type": "mysql", "uid": "trade-mysql"}, "format": "time_series", "rawSql": "SELECT CONVERT_TZ(exit_at, '+09:00', '+00:00') + INTERVAL DATEDIFF(DATE(DATE_ADD(UTC_TIMESTAMP(), INTERVAL 9 HOUR)), '$trade_date') DAY AS time, pnl AS 損益 FROM daytrades WHERE trade_date = '$trade_date' AND stock_code IN ($stock_code) AND ('$side' = 'All' OR side = '$side') ORDER BY exit_at", "refId": "B"}
+        {"datasource": {"type": "mysql", "uid": "trade-mysql"}, "format": "time_series", "rawSql": "SELECT CONVERT_TZ(exit_at, '+09:00', '+00:00') + INTERVAL DATEDIFF(DATE(DATE_ADD(UTC_TIMESTAMP(), INTERVAL 9 HOUR)), '$trade_date') DAY AS time, CASE WHEN pnl >= 0 THEN pnl ELSE NULL END AS 利益, CASE WHEN pnl < 0 THEN pnl ELSE NULL END AS 損失 FROM daytrades WHERE trade_date = '$trade_date' AND stock_code IN ($stock_code) AND ('$side' = 'All' OR side = '$side') ORDER BY exit_at", "refId": "B"}
       ]
     },
     {
