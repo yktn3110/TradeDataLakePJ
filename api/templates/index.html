@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>トレードデータ取込</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #111217;
+    color: #d8d9da;
+    font-family: 'Inter', sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+  }
+  .card {
+    background: #181b1f;
+    border: 1px solid #2c2f33;
+    border-radius: 6px;
+    padding: 36px;
+    width: 100%;
+    max-width: 480px;
+  }
+  h1 {
+    font-size: 18px;
+    font-weight: 500;
+    color: #d8d9da;
+    margin-bottom: 6px;
+  }
+  .sub {
+    font-size: 12px;
+    color: #6b6b6b;
+    margin-bottom: 28px;
+  }
+  .drop-zone {
+    border: 2px dashed #3a3d42;
+    border-radius: 6px;
+    padding: 40px 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s;
+    position: relative;
+  }
+  .drop-zone:hover, .drop-zone.dragover {
+    border-color: #ff9830;
+    background: rgba(255,152,48,0.04);
+  }
+  .drop-zone input[type="file"] {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    cursor: pointer;
+    width: 100%;
+    height: 100%;
+  }
+  .drop-icon { font-size: 32px; margin-bottom: 10px; }
+  .drop-label { font-size: 13px; color: #8e8e8e; }
+  .drop-label span { color: #ff9830; }
+  .file-name {
+    font-size: 12px;
+    color: #73bf69;
+    margin-top: 8px;
+    min-height: 16px;
+  }
+  .btn {
+    display: block;
+    width: 100%;
+    margin-top: 20px;
+    padding: 12px;
+    background: #ff9830;
+    color: #111217;
+    font-size: 14px;
+    font-weight: 600;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  .btn:hover { background: #f08020; }
+  .btn:disabled { background: #3a3d42; color: #6b6b6b; cursor: not-allowed; }
+
+  /* Result */
+  .result {
+    margin-top: 24px;
+    border-top: 1px solid #2c2f33;
+    padding-top: 20px;
+  }
+  .result-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px solid #1e2025;
+    font-size: 13px;
+  }
+  .result-row .label { color: #8e8e8e; }
+  .result-row .value { font-weight: 500; }
+  .value.green { color: #73bf69; }
+  .value.red { color: #f2495c; }
+  .value.blue { color: #5794f2; }
+  .value.orange { color: #ff9830; }
+  .warnings {
+    margin-top: 12px;
+    font-size: 11px;
+    color: #8e8e8e;
+    background: #1e2025;
+    border-radius: 4px;
+    padding: 10px 12px;
+    max-height: 100px;
+    overflow-y: auto;
+  }
+  .warnings p { margin-bottom: 4px; }
+  .error-box {
+    margin-top: 20px;
+    background: rgba(242,73,92,0.1);
+    border: 1px solid rgba(242,73,92,0.3);
+    border-radius: 4px;
+    padding: 12px 16px;
+    color: #f2495c;
+    font-size: 13px;
+  }
+  .grafana-link {
+    display: block;
+    text-align: center;
+    margin-top: 20px;
+    color: #5794f2;
+    font-size: 12px;
+    text-decoration: none;
+  }
+  .grafana-link:hover { text-decoration: underline; }
+  .tabs {
+    display: flex;
+    gap: 2px;
+    margin-bottom: 24px;
+  }
+  .tab {
+    flex: 1;
+    padding: 8px;
+    background: #1e2025;
+    border: 1px solid #2c2f33;
+    border-radius: 4px;
+    color: #6b6b6b;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.2s;
+  }
+  .tab.active { background: #ff9830; color: #111217; border-color: #ff9830; }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+</style>
+</head>
+<body>
+
+<div class="card">
+  <h1>トレードデータ取込</h1>
+
+  <div class="tabs">
+    <div class="tab active" onclick="switchTab('csv')">特定口座 CSV</div>
+    <div class="tab" onclick="switchTab('daytrade')">デイトレ xlsx</div>
+  </div>
+
+  <!-- CSV tab -->
+  <div class="tab-panel active" id="panel-csv">
+    <p class="sub">SBI証券 特定口座損益明細CSV をアップロードしてください</p>
+    <form method="post" action="/upload" enctype="multipart/form-data" id="uploadForm">
+      <div class="drop-zone" id="dropZone">
+        <input type="file" name="file" accept=".csv" id="fileInput" required>
+        <div class="drop-icon">📂</div>
+        <div class="drop-label">ここにCSVをドロップ、または<span>クリックして選択</span></div>
+        <div class="file-name" id="fileName"></div>
+      </div>
+      <button type="submit" class="btn" id="submitBtn" disabled>取込開始</button>
+    </form>
+  </div>
+
+  <!-- Daytrade tab -->
+  <div class="tab-panel" id="panel-daytrade">
+    <p class="sub">デイトレ記録 xlsx をアップロードしてください（元データシート必須）</p>
+    <form method="post" action="/upload/daytrade" enctype="multipart/form-data" id="dtForm">
+      <div class="drop-zone" id="dtDropZone">
+        <input type="file" name="file" accept=".xlsx" id="dtFileInput" required>
+        <div class="drop-icon">📊</div>
+        <div class="drop-label">ここにxlsxをドロップ、または<span>クリックして選択</span></div>
+        <div class="file-name" id="dtFileName"></div>
+      </div>
+      <button type="submit" class="btn" id="dtSubmitBtn" disabled>取込開始</button>
+    </form>
+  </div>
+
+  {% if error %}
+  <div class="error-box">エラー: {{ error }}</div>
+  {% endif %}
+
+  {% if result %}
+  <div class="result">
+    <div class="result-row">
+      <span class="label">ファイル名</span>
+      <span class="value">{{ result.filename }}</span>
+    </div>
+    <div class="result-row">
+      <span class="label">読み込み件数</span>
+      <span class="value blue">{{ result.parsed }} 件</span>
+    </div>
+    <div class="result-row">
+      <span class="label">DB追加件数</span>
+      <span class="value green">{{ result.inserted }} 件</span>
+    </div>
+    {% if result.skipped > 0 %}
+    <div class="result-row">
+      <span class="label">スキップ（重複）</span>
+      <span class="value orange">{{ result.skipped }} 件</span>
+    </div>
+    {% endif %}
+    <div class="result-row">
+      <span class="label">損益合計</span>
+      <span class="value {% if result.total_pnl >= 0 %}green{% else %}red{% endif %}">
+        {% if result.total_pnl >= 0 %}+{% endif %}{{ "{:,}".format(result.total_pnl|int) }} 円
+      </span>
+    </div>
+    {% if result.warnings %}
+    <div class="warnings">
+      {% for w in result.warnings %}<p>⚠ {{ w }}</p>{% endfor %}
+    </div>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  <a href="http://localhost:3000" class="grafana-link">Grafana ダッシュボードを開く →</a>
+</div>
+
+<script>
+  function setupDropZone(dropZoneId, inputId, fileNameId, btnId, formId) {
+    const input = document.getElementById(inputId);
+    const fileName = document.getElementById(fileNameId);
+    const btn = document.getElementById(btnId);
+    const dropZone = document.getElementById(dropZoneId);
+    input.addEventListener('change', () => {
+      if (input.files.length > 0) { fileName.textContent = input.files[0].name; btn.disabled = false; }
+    });
+    dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
+    dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+    dropZone.addEventListener('drop', e => {
+      e.preventDefault(); dropZone.classList.remove('dragover');
+      input.files = e.dataTransfer.files;
+      if (input.files.length > 0) { fileName.textContent = input.files[0].name; btn.disabled = false; }
+    });
+    document.getElementById(formId).addEventListener('submit', () => { btn.disabled = true; btn.textContent = '取込中...'; });
+  }
+
+  setupDropZone('dropZone',   'fileInput',   'fileName',   'submitBtn', 'uploadForm');
+  setupDropZone('dtDropZone', 'dtFileInput', 'dtFileName', 'dtSubmitBtn', 'dtForm');
+
+  function switchTab(tab) {
+    document.querySelectorAll('.tab').forEach((t, i) => t.classList.toggle('active', (i === 0) === (tab === 'csv')));
+    document.getElementById('panel-csv').classList.toggle('active', tab === 'csv');
+    document.getElementById('panel-daytrade').classList.toggle('active', tab === 'daytrade');
+  }
+</script>
+</body>
+</html>

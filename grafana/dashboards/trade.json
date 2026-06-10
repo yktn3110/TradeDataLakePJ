@@ -1,0 +1,365 @@
+{
+  "title": "トレード損益ダッシュボード",
+  "uid": "trade-pnl-v1",
+  "description": "SBI証券 特定口座損益明細",
+  "timezone": "Asia/Tokyo",
+  "schemaVersion": 38,
+  "version": 203,
+  "time": {
+    "from": "now/M",
+    "to": "now/M"
+  },
+  "refresh": "",
+  "graphTooltip": 1,
+  "tags": ["trade"],
+  "links": [
+    {
+      "title": "CSVアップロード",
+      "url": "http://localhost:8000",
+      "type": "link",
+      "icon": "external link",
+      "tooltip": "SBI証券CSVをインポート",
+      "targetBlank": true
+    }
+  ],
+  "annotations": {"list": []},
+  "templating": {
+    "list": [
+      {
+        "type": "query",
+        "name": "stock_code",
+        "label": "銘柄",
+        "datasource": {"type": "mysql", "uid": "trade-mysql"},
+        "query": "SELECT stock_name AS __text, stock_code AS __value FROM (SELECT DISTINCT stock_code, stock_name FROM trades) t ORDER BY stock_code",
+        "multi": true,
+        "includeAll": true,
+        "current": {},
+        "hide": 0,
+        "refresh": 2,
+        "sort": 1
+      },
+      {
+        "type": "custom",
+        "name": "category",
+        "label": "デイ/スイング",
+        "query": "All,day,swing",
+        "options": [
+          {"text": "All", "value": "All", "selected": true},
+          {"text": "デイ", "value": "day", "selected": false},
+          {"text": "スイング", "value": "swing", "selected": false}
+        ],
+        "current": {"text": "All", "value": "All"},
+        "multi": false,
+        "includeAll": false,
+        "hide": 0
+      },
+      {
+        "type": "custom",
+        "name": "trade_type",
+        "label": "取引種別",
+        "query": "All,現物売,信用返済売,信用返済買",
+        "options": [
+          {"text": "All", "value": "All", "selected": true},
+          {"text": "現物売", "value": "現物売", "selected": false},
+          {"text": "信用返済売", "value": "信用返済売", "selected": false},
+          {"text": "信用返済買", "value": "信用返済買", "selected": false}
+        ],
+        "current": {"text": "All", "value": "All"},
+        "multi": false,
+        "includeAll": false,
+        "hide": 0
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 100, "type": "row", "title": "期間分析",
+      "gridPos": {"x": 0, "y": 0, "w": 24, "h": 1},
+      "collapsed": false, "panels": []
+    },
+    {
+      "id": 101, "type": "row", "title": "全期間サマリー",
+      "gridPos": {"x": 0, "y": 38, "w": 24, "h": 1},
+      "collapsed": false, "panels": []
+    },
+    {
+      "id": 1, "type": "stat", "title": "総損益",
+      "gridPos": {"x": 0, "y": 1, "w": 4, "h": 3},
+      "datasource": {"type": "mysql", "uid": "trade-mysql"},
+      "fieldConfig": {
+        "defaults": {
+          "unit": "locale",
+          "thresholds": {"mode": "absolute", "steps": [{"color": "#f2495c", "value": null}, {"color": "#73bf69", "value": 0}]},
+          "color": {"mode": "thresholds"}
+        }
+      },
+      "options": {"reduceOptions": {"calcs": ["lastNotNull"]}, "colorMode": "value", "graphMode": "none", "textMode": "auto"},
+      "targets": [{"datasource": {"type": "mysql", "uid": "trade-mysql"}, "rawSql": "SELECT SUM(pnl) as value FROM trades_view WHERE trade_date BETWEEN '${__from:date:YYYY-MM-DD}' AND '${__to:date:YYYY-MM-DD}' AND stock_code IN ($stock_code) AND ('$category' = 'All' OR trade_category = '$category') AND ('$trade_type' = 'All' OR trade_type = '$trade_type')", "format": "table", "refId": "A"}]
+    },
+    {
+      "id": 2, "type": "stat", "title": "トレード数",
+      "gridPos": {"x": 4, "y": 1, "w": 4, "h": 3},
+      "datasource": {"type": "mysql", "uid": "trade-mysql"},
+      "fieldConfig": {"defaults": {"unit": "short", "color": {"mode": "fixed", "fixedColor": "#5794f2"}}},
+      "options": {"reduceOptions": {"calcs": ["lastNotNull"]}, "colorMode": "value", "graphMode": "none"},
+      "targets": [{"datasource": {"type": "mysql", "uid": "trade-mysql"}, "rawSql": "SELECT COUNT(*) as value FROM trades_view WHERE trade_date BETWEEN '${__from:date:YYYY-MM-DD}' AND '${__to:date:YYYY-MM-DD}' AND stock_code IN ($stock_code) AND ('$category' = 'All' OR trade_category = '$category') AND ('$trade_type' = 'All' OR trade_type = '$trade_type')", "format": "table", "refId": "A"}]
+    },
+    {
+      "id": 3, "type": "stat", "title": "勝率",
+      "gridPos": {"x": 8, "y": 1, "w": 4, "h": 3},
+      "datasource": {"type": "mysql", "uid": "trade-mysql"},
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "thresholds": {"mode": "absolute", "steps": [{"color": "#f2495c", "value": null}, {"color": "#ff9830", "value": 50}, {"color": "#73bf69", "value": 60}]},
+          "color": {"mode": "thresholds"}
+        }
+      },
+      "options": {"reduceOptions": {"calcs": ["lastNotNull"]}, "colorMode": "value", "graphMode": "none"},
+      "targets": [{"datasource": {"type": "mysql", "uid": "trade-mysql"}, "rawSql": "SELECT ROUND(100.0 * SUM(CASE WHEN pnl > 0 THEN 1 ELSE 0 END) / COUNT(*), 1) as value FROM trades_view WHERE trade_date BETWEEN '${__from:date:YYYY-MM-DD}' AND '${__to:date:YYYY-MM-DD}' AND stock_code IN ($stock_code) AND ('$category' = 'All' OR trade_category = '$category') AND ('$trade_type' = 'All' OR trade_type = '$trade_type')", "format": "table", "refId": "A"}]
+    },
+    {
+      "id": 4, "type": "stat", "title": "プロフィットファクター",
+      "gridPos": {"x": 12, "y": 1, "w": 4, "h": 3},
+      "datasource": {"type": "mysql", "uid": "trade-mysql"},
+      "fieldConfig": {
+        "defaults": {
+          "decimals": 2,
+          "thresholds": {"mode": "absolute", "steps": [{"color": "#f2495c", "value": null}, {"color": "#ff9830", "value": 1}, {"color": "#73bf69", "value": 1.5}]},
+          "color": {"mode": "thresholds"}
+        }
+      },
+      "options": {"reduceOptions": {"calcs": ["lastNotNull"]}, "colorMode": "value", "graphMode": "none"},
+      "targets": [{"datasource": {"type": "mysql", "uid": "trade-mysql"}, "rawSql": "SELECT ROUND(SUM(CASE WHEN pnl > 0 THEN pnl ELSE 0 END) / NULLIF(ABS(SUM(CASE WHEN pnl < 0 THEN pnl ELSE 0 END)), 0), 2) as value FROM trades_view WHERE trade_date BETWEEN '${__from:date:YYYY-MM-DD}' AND '${__to:date:YYYY-MM-DD}' AND stock_code IN ($stock_code) AND ('$category' = 'All' OR trade_category = '$category') AND ('$trade_type' = 'All' OR trade_type = '$trade_type')", "format": "table", "refId": "A"}]
+    },
+    {
+      "id": 5, "type": "stat", "title": "平均利益",
+      "gridPos": {"x": 16, "y": 1, "w": 4, "h": 3},
+      "datasource": {"type": "mysql", "uid": "trade-mysql"},
+      "fieldConfig": {"defaults": {"unit": "locale", "color": {"mode": "fixed", "fixedColor": "#73bf69"}}},
+      "options": {"reduceOptions": {"calcs": ["lastNotNull"]}, "colorMode": "value", "graphMode": "none"},
+      "targets": [{"datasource": {"type": "mysql", "uid": "trade-mysql"}, "rawSql": "SELECT ROUND(AVG(pnl)) as value FROM trades_view WHERE pnl > 0 AND trade_date BETWEEN '${__from:date:YYYY-MM-DD}' AND '${__to:date:YYYY-MM-DD}' AND stock_code IN ($stock_code) AND ('$category' = 'All' OR trade_category = '$category') AND ('$trade_type' = 'All' OR trade_type = '$trade_type')", "format": "table", "refId": "A"}]
+    },
+    {
+      "id": 6, "type": "stat", "title": "平均損失",
+      "gridPos": {"x": 20, "y": 1, "w": 4, "h": 3},
+      "datasource": {"type": "mysql", "uid": "trade-mysql"},
+      "fieldConfig": {"defaults": {"unit": "locale", "color": {"mode": "fixed", "fixedColor": "#f2495c"}}},
+      "options": {"reduceOptions": {"calcs": ["lastNotNull"]}, "colorMode": "value", "graphMode": "none"},
+      "targets": [{"datasource": {"type": "mysql", "uid": "trade-mysql"}, "rawSql": "SELECT ROUND(AVG(pnl)) as value FROM trades_view WHERE pnl < 0 AND trade_date BETWEEN '${__from:date:YYYY-MM-DD}' AND '${__to:date:YYYY-MM-DD}' AND stock_code IN ($stock_code) AND ('$category' = 'All' OR trade_category = '$category') AND ('$trade_type' = 'All' OR trade_type = '$trade_type')", "format": "table", "refId": "A"}]
+    },
+    {
+      "id": 17, "type": "timeseries", "title": "累積損益カーブ",
+      "gridPos": {"x": 0, "y": 4, "w": 24, "h": 8},
+      "datasource": {"type": "mysql", "uid": "trade-mysql"},
+      "fieldConfig": {
+        "defaults": {
+          "unit": "locale",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "lineWidth": 4,
+            "fillOpacity": 25,
+            "gradientMode": "opacity",
+            "showPoints": "always",
+            "pointSize": 9,
+            "spanNulls": false
+          }
+        },
+        "overrides": [
+          {"matcher": {"id": "byName", "options": "cum_pnl"}, "properties": [
+            {"id": "displayName", "value": "累積損益"},
+            {"id": "thresholds", "value": {"mode": "absolute", "steps": [{"color": "#f2495c", "value": null}, {"color": "#73bf69", "value": 0}]}},
+            {"id": "color", "value": {"mode": "thresholds"}}
+          ]}
+        ]
+      },
+      "options": {"tooltip": {"mode": "single"}, "legend": {"displayMode": "list", "placement": "right"}},
+      "targets": [{"datasource": {"type": "mysql", "uid": "trade-mysql"}, "rawSql": "SELECT CAST(trade_date AS DATETIME) AS time, SUM(pnl) OVER (ORDER BY trade_date ROWS UNBOUNDED PRECEDING) AS cum_pnl FROM (SELECT trade_date, SUM(pnl) AS pnl FROM trades_view WHERE trade_date BETWEEN '${__from:date:YYYY-MM-DD}' AND '${__to:date:YYYY-MM-DD}' AND stock_code IN ($stock_code) AND ('$category' = 'All' OR trade_category = '$category') AND ('$trade_type' = 'All' OR trade_type = '$trade_type') GROUP BY trade_date) d ORDER BY trade_date", "format": "time_series", "refId": "A"}]
+    },
+    {
+      "id": 9, "type": "timeseries", "title": "日別損益",
+      "gridPos": {"x": 0, "y": 12, "w": 24, "h": 10},
+      "datasource": {"type": "datasource", "uid": "-- Mixed --"},
+      "fieldConfig": {
+        "defaults": {
+          "unit": "locale",
+          "custom": {"drawStyle": "bars", "fillOpacity": 80, "lineWidth": 1, "barAlignment": 0, "thresholdsStyle": {"mode": "bar"}},
+          "thresholds": {"mode": "absolute", "steps": [{"color": "#f2495c", "value": null}, {"color": "#73bf69", "value": 0}]},
+          "color": {"mode": "thresholds"}
+        },
+        "overrides": [
+          {"matcher": {"id": "byName", "options": "日経225"}, "properties": [
+            {"id": "custom.drawStyle", "value": "line"},
+            {"id": "custom.fillOpacity", "value": 0},
+            {"id": "custom.lineWidth", "value": 2},
+            {"id": "custom.thresholdsStyle", "value": {"mode": "off"}},
+            {"id": "color", "value": {"mode": "fixed", "fixedColor": "#FF9830"}},
+            {"id": "unit", "value": "short"},
+            {"id": "custom.axisPlacement", "value": "right"},
+            {"id": "custom.axisLabel", "value": "日経225"}
+          ]},
+          {"matcher": {"id": "byName", "options": "S&P500"}, "properties": [
+            {"id": "custom.drawStyle", "value": "line"},
+            {"id": "custom.fillOpacity", "value": 0},
+            {"id": "custom.lineWidth", "value": 2},
+            {"id": "custom.thresholdsStyle", "value": {"mode": "off"}},
+            {"id": "color", "value": {"mode": "fixed", "fixedColor": "#5794F2"}},
+            {"id": "unit", "value": "short"},
+            {"id": "custom.axisPlacement", "value": "right"},
+            {"id": "custom.axisLabel", "value": "S&P500"}
+          ]}
+        ]
+      },
+      "options": {"tooltip": {"mode": "multi"}, "legend": {"displayMode": "list", "placement": "bottom"}},
+      "targets": [
+        {"datasource": {"type": "mysql", "uid": "trade-mysql"}, "rawSql": "SELECT CAST(trade_date AS DATETIME) AS time, SUM(pnl) AS 損益 FROM trades_view WHERE trade_date BETWEEN '${__from:date:YYYY-MM-DD}' AND '${__to:date:YYYY-MM-DD}' AND stock_code IN ($stock_code) AND ('$category' = 'All' OR trade_category = '$category') AND ('$trade_type' = 'All' OR trade_type = '$trade_type') GROUP BY trade_date ORDER BY trade_date", "format": "time_series", "refId": "A"},
+        {"datasource": {"type": "yesoreyeram-infinity-datasource", "uid": "infinity"}, "type": "json", "source": "url", "url": "http://api:8000/market/nikkei?from=${__from}&to=${__to}", "url_options": {"method": "GET"}, "columns": [{"selector": "time", "text": "time", "type": "timestamp_epoch"}, {"selector": "value", "text": "日経225", "type": "number"}], "format": "timeseries", "refId": "B"},
+        {"datasource": {"type": "yesoreyeram-infinity-datasource", "uid": "infinity"}, "type": "json", "source": "url", "url": "http://api:8000/market/sp500?from=${__from}&to=${__to}", "url_options": {"method": "GET"}, "columns": [{"selector": "time", "text": "time", "type": "timestamp_epoch"}, {"selector": "value", "text": "S&P500", "type": "number"}], "format": "timeseries", "refId": "C"}
+      ]
+    },
+    {
+      "id": 12, "type": "barchart", "title": "銘柄別損益 TOP15",
+      "gridPos": {"x": 0, "y": 22, "w": 12, "h": 8},
+      "datasource": {"type": "mysql", "uid": "trade-mysql"},
+      "fieldConfig": {
+        "defaults": {"unit": "locale"},
+        "overrides": [{"matcher": {"id": "byName", "options": "損益"}, "properties": [{"id": "custom.thresholdsStyle", "value": {"mode": "bar"}}, {"id": "thresholds", "value": {"mode": "absolute", "steps": [{"color": "#f2495c", "value": null}, {"color": "#73bf69", "value": 0}]}}, {"id": "color", "value": {"mode": "thresholds"}}]}]
+      },
+      "options": {"xField": "銘柄", "orientation": "horizontal", "groupWidth": 0.7, "barWidth": 0.8, "tooltip": {"mode": "single"}},
+      "targets": [{"datasource": {"type": "mysql", "uid": "trade-mysql"}, "rawSql": "SELECT CONCAT(stock_code, ' ', stock_name) as 銘柄, SUM(pnl) as 損益 FROM trades_view WHERE trade_date BETWEEN '${__from:date:YYYY-MM-DD}' AND '${__to:date:YYYY-MM-DD}' AND stock_code IN ($stock_code) AND ('$category' = 'All' OR trade_category = '$category') AND ('$trade_type' = 'All' OR trade_type = '$trade_type') GROUP BY stock_code, stock_name ORDER BY 損益 DESC LIMIT 15", "format": "table", "refId": "A"}]
+    },
+    {
+      "id": 19, "type": "barchart", "title": "銘柄別損益 WORST15",
+      "gridPos": {"x": 12, "y": 22, "w": 12, "h": 8},
+      "datasource": {"type": "mysql", "uid": "trade-mysql"},
+      "fieldConfig": {
+        "defaults": {"unit": "locale"},
+        "overrides": [{"matcher": {"id": "byName", "options": "損益"}, "properties": [{"id": "custom.thresholdsStyle", "value": {"mode": "bar"}}, {"id": "thresholds", "value": {"mode": "absolute", "steps": [{"color": "#f2495c", "value": null}, {"color": "#73bf69", "value": 0}]}}, {"id": "color", "value": {"mode": "thresholds"}}]}]
+      },
+      "options": {"xField": "銘柄", "orientation": "horizontal", "groupWidth": 0.7, "barWidth": 0.8, "tooltip": {"mode": "single"}},
+      "targets": [{"datasource": {"type": "mysql", "uid": "trade-mysql"}, "rawSql": "SELECT CONCAT(stock_code, ' ', stock_name) as 銘柄, SUM(pnl) as 損益 FROM trades_view WHERE trade_date BETWEEN '${__from:date:YYYY-MM-DD}' AND '${__to:date:YYYY-MM-DD}' AND stock_code IN ($stock_code) AND ('$category' = 'All' OR trade_category = '$category') AND ('$trade_type' = 'All' OR trade_type = '$trade_type') GROUP BY stock_code, stock_name ORDER BY 損益 ASC LIMIT 15", "format": "table", "refId": "A"}]
+    },
+    {
+      "id": 11, "type": "piechart", "title": "取引種別",
+      "gridPos": {"x": 0, "y": 30, "w": 12, "h": 8},
+      "datasource": {"type": "mysql", "uid": "trade-mysql"},
+      "fieldConfig": {
+        "defaults": {"unit": "short"},
+        "overrides": [
+          {"matcher": {"id": "byName", "options": "cash_sell"}, "properties": [{"id": "displayName", "value": "現物売"}]},
+          {"matcher": {"id": "byName", "options": "margin_sell"}, "properties": [{"id": "displayName", "value": "信用返済売"}]},
+          {"matcher": {"id": "byName", "options": "margin_buy"}, "properties": [{"id": "displayName", "value": "信用返済買"}]}
+        ]
+      },
+      "options": {"pieType": "donut", "tooltip": {"mode": "single"}, "legend": {"displayMode": "list", "placement": "bottom"}},
+      "targets": [{"datasource": {"type": "mysql", "uid": "trade-mysql"}, "rawSql": "SELECT SUM(CASE WHEN trade_type = '現物売' THEN 1 ELSE 0 END) AS cash_sell, SUM(CASE WHEN trade_type = '信用返済売' THEN 1 ELSE 0 END) AS margin_sell, SUM(CASE WHEN trade_type = '信用返済買' THEN 1 ELSE 0 END) AS margin_buy FROM trades_view WHERE stock_code IN ($stock_code) AND ('$category' = 'All' OR trade_category = '$category') AND ('$trade_type' = 'All' OR trade_type = '$trade_type')", "format": "table", "refId": "A"}]
+    },
+    {
+      "id": 18, "type": "barchart", "title": "取引種別損益",
+      "gridPos": {"x": 12, "y": 30, "w": 12, "h": 8},
+      "datasource": {"type": "mysql", "uid": "trade-mysql"},
+      "fieldConfig": {
+        "defaults": {"unit": "locale"},
+        "overrides": [
+          {"matcher": {"id": "byName", "options": "損益"}, "properties": [
+            {"id": "custom.thresholdsStyle", "value": {"mode": "bar"}},
+            {"id": "thresholds", "value": {"mode": "absolute", "steps": [{"color": "#f2495c", "value": null}, {"color": "#73bf69", "value": 0}]}},
+            {"id": "color", "value": {"mode": "thresholds"}}
+          ]}
+        ]
+      },
+      "options": {"barWidth": 0.6, "groupWidth": 0.7, "orientation": "auto", "tooltip": {"mode": "single"}, "xField": "取引種別"},
+      "targets": [{"datasource": {"type": "mysql", "uid": "trade-mysql"}, "rawSql": "SELECT trade_type AS 取引種別, SUM(pnl) AS 損益 FROM trades_view WHERE trade_date BETWEEN '${__from:date:YYYY-MM-DD}' AND '${__to:date:YYYY-MM-DD}' AND stock_code IN ($stock_code) AND ('$category' = 'All' OR trade_category = '$category') AND ('$trade_type' = 'All' OR trade_type = '$trade_type') GROUP BY trade_type ORDER BY 損益 DESC", "format": "table", "refId": "A"}]
+    },
+    {
+      "id": 13, "type": "barchart", "title": "損益分布",
+      "gridPos": {"x": 0, "y": 39, "w": 8, "h": 9},
+      "datasource": {"type": "mysql", "uid": "trade-mysql"},
+      "fieldConfig": {
+        "defaults": {"unit": "short"},
+        "overrides": [{"matcher": {"id": "byName", "options": "件数"}, "properties": [{"id": "custom.thresholdsStyle", "value": {"mode": "bar"}}, {"id": "thresholds", "value": {"mode": "absolute", "steps": [{"color": "#f2495c", "value": null}, {"color": "#73bf69", "value": 5}]}}, {"id": "color", "value": {"mode": "thresholds"}}]}]
+      },
+      "options": {"xField": "損益帯", "orientation": "auto", "groupWidth": 0.7, "barWidth": 0.97, "tooltip": {"mode": "single"}, "xTickLabelRotation": -45},
+      "targets": [{"datasource": {"type": "mysql", "uid": "trade-mysql"}, "rawSql": "SELECT CASE WHEN pnl <= -50000 THEN '-5万以下' WHEN pnl <= -30000 THEN '-3〜-5万' WHEN pnl <= -10000 THEN '-1〜-3万' WHEN pnl < 0 THEN '-1万未満' WHEN pnl = 0 THEN '0' WHEN pnl < 10000 THEN '1万未満' WHEN pnl < 30000 THEN '1〜3万' WHEN pnl < 50000 THEN '3〜5万' ELSE '5万以上' END as 損益帯, COUNT(*) as 件数 FROM trades_view WHERE stock_code IN ($stock_code) AND ('$category' = 'All' OR trade_category = '$category') AND ('$trade_type' = 'All' OR trade_type = '$trade_type') GROUP BY 損益帯 ORDER BY MIN(pnl)", "format": "table", "refId": "A"}]
+    },
+    {
+      "id": 8, "type": "timeseries", "title": "月別損益",
+      "gridPos": {"x": 8, "y": 39, "w": 8, "h": 9},
+      "datasource": {"type": "datasource", "uid": "-- Mixed --"},
+      "options": {"tooltip": {"mode": "multi"}, "legend": {"displayMode": "list", "placement": "bottom"}},
+      "fieldConfig": {
+        "defaults": {
+          "unit": "locale",
+          "custom": {"drawStyle": "bars", "fillOpacity": 80, "lineWidth": 1, "barAlignment": 0, "thresholdsStyle": {"mode": "bar"}},
+          "thresholds": {"mode": "absolute", "steps": [{"color": "#f2495c", "value": null}, {"color": "#73bf69", "value": 0}]},
+          "color": {"mode": "thresholds"}
+        },
+        "overrides": [
+          {"matcher": {"id": "byName", "options": "損益"}, "properties": [
+            {"id": "custom.axisPlacement", "value": "left"},
+            {"id": "custom.axisLabel", "value": "損益"}
+          ]},
+          {"matcher": {"id": "byName", "options": "日経225"}, "properties": [
+            {"id": "custom.drawStyle", "value": "line"},
+            {"id": "custom.fillOpacity", "value": 0},
+            {"id": "custom.lineWidth", "value": 2},
+            {"id": "custom.thresholdsStyle", "value": {"mode": "off"}},
+            {"id": "color", "value": {"mode": "fixed", "fixedColor": "#FF9830"}},
+            {"id": "unit", "value": "short"},
+            {"id": "custom.axisPlacement", "value": "right"},
+            {"id": "custom.axisLabel", "value": "日経225"}
+          ]},
+          {"matcher": {"id": "byName", "options": "S&P500"}, "properties": [
+            {"id": "custom.drawStyle", "value": "line"},
+            {"id": "custom.fillOpacity", "value": 0},
+            {"id": "custom.lineWidth", "value": 2},
+            {"id": "custom.thresholdsStyle", "value": {"mode": "off"}},
+            {"id": "color", "value": {"mode": "fixed", "fixedColor": "#5794F2"}},
+            {"id": "unit", "value": "short"},
+            {"id": "custom.axisPlacement", "value": "right"},
+            {"id": "custom.axisLabel", "value": "S&P500"}
+          ]}
+        ]
+      },
+      "targets": [
+        {"datasource": {"type": "mysql", "uid": "trade-mysql"}, "rawSql": "SELECT CAST(month AS DATETIME) AS time, pnl AS 損益 FROM (SELECT DATE_FORMAT(trade_date, '%Y-%m-01') AS month, SUM(pnl) AS pnl FROM trades_view WHERE stock_code IN ($stock_code) AND ('$category' = 'All' OR trade_category = '$category') AND ('$trade_type' = 'All' OR trade_type = '$trade_type') GROUP BY DATE_FORMAT(trade_date, '%Y-%m-01')) t ORDER BY time", "format": "time_series", "refId": "A"},
+        {"datasource": {"type": "yesoreyeram-infinity-datasource", "uid": "infinity"}, "type": "json", "source": "url", "url": "http://api:8000/market/nikkei?from=1704067200000&to=1893456000000", "url_options": {"method": "GET"}, "columns": [{"selector": "time", "text": "time", "type": "timestamp_epoch"}, {"selector": "value", "text": "日経225", "type": "number"}], "format": "timeseries", "refId": "B"},
+        {"datasource": {"type": "yesoreyeram-infinity-datasource", "uid": "infinity"}, "type": "json", "source": "url", "url": "http://api:8000/market/sp500?from=1704067200000&to=1893456000000", "url_options": {"method": "GET"}, "columns": [{"selector": "time", "text": "time", "type": "timestamp_epoch"}, {"selector": "value", "text": "S&P500", "type": "number"}], "format": "timeseries", "refId": "C"}
+      ]
+    },
+    {
+      "id": 10, "type": "barchart", "title": "年別損益",
+      "gridPos": {"x": 16, "y": 39, "w": 8, "h": 9},
+      "datasource": {"type": "mysql", "uid": "trade-mysql"},
+      "fieldConfig": {
+        "defaults": {"unit": "locale"},
+        "overrides": [{"matcher": {"id": "byName", "options": "損益"}, "properties": [{"id": "custom.thresholdsStyle", "value": {"mode": "bar"}}, {"id": "thresholds", "value": {"mode": "absolute", "steps": [{"color": "#f2495c", "value": null}, {"color": "#73bf69", "value": 0}]}}, {"id": "color", "value": {"mode": "thresholds"}}]}]
+      },
+      "options": {"xField": "年", "orientation": "auto", "groupWidth": 0.7, "barWidth": 0.6, "tooltip": {"mode": "single"}},
+      "targets": [{"datasource": {"type": "mysql", "uid": "trade-mysql"}, "rawSql": "SELECT YEAR(trade_date) as 年, SUM(pnl) as 損益 FROM trades_view WHERE stock_code IN ($stock_code) AND ('$category' = 'All' OR trade_category = '$category') AND ('$trade_type' = 'All' OR trade_type = '$trade_type') GROUP BY 年 ORDER BY 年", "format": "table", "refId": "A"}]
+    },
+    {
+      "id": 14, "type": "table", "title": "トレード明細",
+      "gridPos": {"x": 0, "y": 48, "w": 24, "h": 10},
+      "datasource": {"type": "mysql", "uid": "trade-mysql"},
+      "fieldConfig": {
+        "defaults": {"custom": {"align": "auto"}},
+        "overrides": [
+          {"matcher": {"id": "byName", "options": "pnl"}, "properties": [{"id": "displayName", "value": "損益"}, {"id": "unit", "value": "locale"}, {"id": "custom.displayMode", "value": "color-text"}, {"id": "thresholds", "value": {"mode": "absolute", "steps": [{"color": "#f2495c", "value": null}, {"color": "#73bf69", "value": 0}]}}, {"id": "color", "value": {"mode": "thresholds"}}]},
+          {"matcher": {"id": "byName", "options": "trade_date"}, "properties": [{"id": "displayName", "value": "約定日"}]},
+          {"matcher": {"id": "byName", "options": "stock_code"}, "properties": [{"id": "displayName", "value": "コード"}]},
+          {"matcher": {"id": "byName", "options": "stock_name"}, "properties": [{"id": "displayName", "value": "銘柄名"}]},
+          {"matcher": {"id": "byName", "options": "trade_type"}, "properties": [{"id": "displayName", "value": "取引種別"}]},
+          {"matcher": {"id": "byName", "options": "trade_category"}, "properties": [{"id": "displayName", "value": "デイ/スイング"}]},
+          {"matcher": {"id": "byName", "options": "quantity"}, "properties": [{"id": "displayName", "value": "数量"}]},
+          {"matcher": {"id": "byName", "options": "sell_amount"}, "properties": [{"id": "displayName", "value": "売却金額"}, {"id": "unit", "value": "locale"}]},
+          {"matcher": {"id": "byName", "options": "acquire_amount"}, "properties": [{"id": "displayName", "value": "取得金額"}, {"id": "unit", "value": "locale"}]},
+          {"matcher": {"id": "byName", "options": "fee"}, "properties": [{"id": "displayName", "value": "費用"}]}
+        ]
+      },
+      "options": {"sortBy": [{"desc": true, "displayName": "約定日"}], "footer": {"show": false}},
+      "targets": [{"datasource": {"type": "mysql", "uid": "trade-mysql"}, "rawSql": "SELECT trade_date, stock_code, stock_name, trade_type, trade_category, quantity, sell_amount, acquire_amount, fee, pnl FROM trades_view WHERE trade_date BETWEEN '${__from:date:YYYY-MM-DD}' AND '${__to:date:YYYY-MM-DD}' AND stock_code IN ($stock_code) AND ('$category' = 'All' OR trade_category = '$category') AND ('$trade_type' = 'All' OR trade_type = '$trade_type') ORDER BY trade_date DESC, id DESC LIMIT 500", "format": "table", "refId": "A"}]
+    }
+  ]
+}
