@@ -5,7 +5,7 @@
   "tags": ["daytrade"],
   "timezone": "Asia/Tokyo",
   "schemaVersion": 38,
-  "version": 9,
+  "version": 30,
   "refresh": "",
   "graphTooltip": 1,
   "time": {"from": "now/d+9h", "to": "now/d-8h"},
@@ -162,7 +162,7 @@
         "defaults": {"unit": "locale"},
         "overrides": [
           {
-            "matcher": {"id": "byName", "options": "エントリー"},
+            "matcher": {"id": "byName", "options": "LONG買い"},
             "properties": [
               {"id": "custom.drawStyle", "value": "points"},
               {"id": "custom.showPoints", "value": "always"},
@@ -172,13 +172,33 @@
             ]
           },
           {
-            "matcher": {"id": "byName", "options": "エグジット"},
+            "matcher": {"id": "byName", "options": "LONG売り"},
             "properties": [
               {"id": "custom.drawStyle", "value": "points"},
               {"id": "custom.showPoints", "value": "always"},
               {"id": "custom.pointSize", "value": 14},
               {"id": "custom.lineWidth", "value": 0},
               {"id": "color", "value": {"mode": "fixed", "fixedColor": "#FF9830"}}
+            ]
+          },
+          {
+            "matcher": {"id": "byName", "options": "SHORT売り"},
+            "properties": [
+              {"id": "custom.drawStyle", "value": "points"},
+              {"id": "custom.showPoints", "value": "always"},
+              {"id": "custom.pointSize", "value": 14},
+              {"id": "custom.lineWidth", "value": 0},
+              {"id": "color", "value": {"mode": "fixed", "fixedColor": "#F2495C"}}
+            ]
+          },
+          {
+            "matcher": {"id": "byName", "options": "SHORT買戻し"},
+            "properties": [
+              {"id": "custom.drawStyle", "value": "points"},
+              {"id": "custom.showPoints", "value": "always"},
+              {"id": "custom.pointSize", "value": 14},
+              {"id": "custom.lineWidth", "value": 0},
+              {"id": "color", "value": {"mode": "fixed", "fixedColor": "#5794F2"}}
             ]
           },
           {
@@ -206,7 +226,7 @@
               {"id": "color", "value": {"mode": "fixed", "fixedColor": "transparent"}},
               {"id": "unit", "value": "locale"}
             ]
-          },
+          }
         ]
       },
       "options": {
@@ -243,13 +263,25 @@
           "datasource": {"type": "mysql", "uid": "trade-mysql"},
           "refId": "B",
           "format": "time_series",
-          "rawSql": "SELECT CONVERT_TZ(entry_at, '+09:00', '+00:00') + INTERVAL DATEDIFF(DATE(DATE_ADD(UTC_TIMESTAMP(), INTERVAL 9 HOUR)), '$trade_date') DAY AS time, entry_price AS エントリー, quantity AS 株数 FROM daytrades WHERE trade_date = '$trade_date' AND stock_code = '$chart_code' AND ('$side' = 'All' OR side = '$side') ORDER BY entry_at"
+          "rawSql": "SELECT CONVERT_TZ(entry_at, '+09:00', '+00:00') + INTERVAL DATEDIFF(DATE(DATE_ADD(UTC_TIMESTAMP(), INTERVAL 9 HOUR)), '$trade_date') DAY AS time, entry_price AS `LONG買い`, quantity AS 株数 FROM daytrades WHERE trade_date = '$trade_date' AND stock_code = '$chart_code' AND side = 'LONG' AND ('$side' = 'All' OR side = '$side') ORDER BY entry_at"
         },
         {
           "datasource": {"type": "mysql", "uid": "trade-mysql"},
           "refId": "C",
           "format": "time_series",
-          "rawSql": "SELECT CONVERT_TZ(exit_at, '+09:00', '+00:00') + INTERVAL DATEDIFF(DATE(DATE_ADD(UTC_TIMESTAMP(), INTERVAL 9 HOUR)), '$trade_date') DAY AS time, exit_price AS エグジット, quantity AS 株数, pnl AS 損益 FROM daytrades WHERE trade_date = '$trade_date' AND stock_code = '$chart_code' AND ('$side' = 'All' OR side = '$side') ORDER BY exit_at"
+          "rawSql": "SELECT CONVERT_TZ(exit_at, '+09:00', '+00:00') + INTERVAL DATEDIFF(DATE(DATE_ADD(UTC_TIMESTAMP(), INTERVAL 9 HOUR)), '$trade_date') DAY AS time, exit_price AS `LONG売り`, quantity AS 株数, pnl AS 損益 FROM daytrades WHERE trade_date = '$trade_date' AND stock_code = '$chart_code' AND side = 'LONG' AND ('$side' = 'All' OR side = '$side') ORDER BY exit_at"
+        },
+        {
+          "datasource": {"type": "mysql", "uid": "trade-mysql"},
+          "refId": "D",
+          "format": "time_series",
+          "rawSql": "SELECT CONVERT_TZ(entry_at, '+09:00', '+00:00') + INTERVAL DATEDIFF(DATE(DATE_ADD(UTC_TIMESTAMP(), INTERVAL 9 HOUR)), '$trade_date') DAY AS time, entry_price AS `SHORT売り`, quantity AS 株数 FROM daytrades WHERE trade_date = '$trade_date' AND stock_code = '$chart_code' AND side = 'SHORT' AND ('$side' = 'All' OR side = '$side') ORDER BY entry_at"
+        },
+        {
+          "datasource": {"type": "mysql", "uid": "trade-mysql"},
+          "refId": "E",
+          "format": "time_series",
+          "rawSql": "SELECT CONVERT_TZ(exit_at, '+09:00', '+00:00') + INTERVAL DATEDIFF(DATE(DATE_ADD(UTC_TIMESTAMP(), INTERVAL 9 HOUR)), '$trade_date') DAY AS time, exit_price AS `SHORT買戻し`, quantity AS 株数, pnl AS 損益 FROM daytrades WHERE trade_date = '$trade_date' AND stock_code = '$chart_code' AND side = 'SHORT' AND ('$side' = 'All' OR side = '$side') ORDER BY exit_at"
         }
       ]
     },
