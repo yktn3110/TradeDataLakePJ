@@ -118,6 +118,20 @@ Grafana ダッシュボード上部の「CSVアップロード」リンク、ま
 
 > 同じファイルを2回アップロードしても重複登録されません。
 
+### DBマイグレーション
+
+テーブル構造の変更は `mysql/migrations/` 以下に番号付きSQLファイルで管理しています。
+`git pull` 後に新しいマイグレーションファイルがあれば順番に実行してください。
+
+```bash
+# 例: 001番を適用
+docker exec trade_mysql mysql -u tradeuser -ptradepass tradedb < mysql/migrations/001_add_fx_trades.sql
+```
+
+| ファイル | 内容 |
+|---|---|
+| 001_add_fx_trades.sql | FXトレードテーブル追加 |
+
 ### ログ確認
 
 ```bash
