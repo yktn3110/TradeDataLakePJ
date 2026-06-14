@@ -1,10 +1,11 @@
-from fastapi import FastAPI, File, UploadFile, Request, Query
+from fastapi import FastAPI, File, Form, UploadFile, Request, Query
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 import httpx
+from datetime import datetime
 
 from importer import run_import
-from daytrade_importer import run_daytrade_import
+from daytrade_importer import run_daytrade_import, run_daytrade_paste
 from chart_router import router as chart_router
 
 app = FastAPI()
@@ -39,6 +40,23 @@ async def market_data(index: str, from_ts: int = Query(alias="from"), to_ts: int
     timestamps = result["timestamp"]
     prices = result["indicators"]["adjclose"][0]["adjclose"]
     return [{"time": ts * 1000, "value": round(p, 2)} for ts, p in zip(timestamps, prices) if p is not None]
+
+
+@app.post("/upload/daytrade/paste", response_class=HTMLResponse)
+async def upload_daytrade_paste(request: Request, text: str = Form(...), filename: str = Form(...)):
+    result = None
+    error = None
+    try:
+        source_name = filename.strip() or datetime.now().strftime("paste_%Y%m%d_%H%M%S")
+        result = run_daytrade_paste(source_name, text)
+    except Exception as e:
+        error = str(e)
+    return templates.TemplateResponse("index.html", {
+        "request": request,
+        "result": result,
+        "error": error,
+        "active_tab": "paste",
+    })
 
 
 @app.post("/upload/daytrade", response_class=HTMLResponse)

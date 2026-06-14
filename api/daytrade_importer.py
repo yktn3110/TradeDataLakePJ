@@ -259,6 +259,169 @@ def build_round_trips(df_norm: pd.DataFrame) -> list[dict]:
 
 
 # ---------------------------------------------------------------------------
+# TSVパーサー（ブラウザ/Excelからのコピペ用）
+# ---------------------------------------------------------------------------
+
+def _to_float_str(v) -> float | None:
+    if v is None:
+        return None
+    s = str(v).strip().replace(',', '')
+    try:
+        return float(s) if s else None
+    except ValueError:
+        return None
+
+
+def parse_daytrade_tsv(text: str) -> pd.DataFrame:
+    """ブラウザ/ExcelからコピーしたTSVテキストをパースしてDataFrameを返す。"""
+    lines = [l for l in text.strip().splitlines() if l.strip()]
+    if not lines:
+        raise ValueError("貼り付けデータが空です")
+
+    rows = [l.split('\t') for l in lines]
+    max_cols = max(len(r) for r in rows)
+    rows = [r + [''] * (max_cols - len(r)) for r in rows]
+    n = len(rows)
+
+    def cell(r, c, default=None):
+        try:
+            v = rows[r][c].strip() if r < n and c < len(rows[r]) else ''
+            return v if v else default
+        except Exception:
+            return default
+
+    recs = []
+    r = 0
+    while r < n:
+        v = rows[r][0].strip().replace(',', '') if rows[r] else ''
+        try:
+            order_no = int(float(v))
+            if not v or float(v) != order_no:
+                raise ValueError()
+        except (ValueError, TypeError):
+            r += 1
+            continue
+
+        base = r
+        status     = cell(base, 1)
+        order_type = cell(base, 2)
+        brand_blob = cell(base, 3)
+        brand, code = _split_brand(brand_blob or '')
+        trade       = cell(base + 1, 3)
+        exec_qty    = _to_float_str(cell(base + 1, 6))
+        exec_cond   = cell(base + 1, 7)
+        order_price = _to_float_str(cell(base + 1, 8))
+        exec_qty    = int(exec_qty) if exec_qty is not None else None
+
+        order_type_str = str(order_type or '')
+        offset   = 1 if '逆指' in order_type_str else 0
+        exec_row = base + 3 + offset
+        time_row = base + 4 + offset
+
+        exec_price_val = _to_float_str(cell(exec_row, 7))
+        date_raw       = cell(exec_row, 5, '')
+        time_raw       = cell(time_row, 5, '')
+
+        # 日付パース（Excelシリアル値 or 文字列）
+        exec_date = None
+        try:
+            serial = float(date_raw.replace(',', ''))
+            exec_date = pd.Timestamp('1899-12-30') + pd.Timedelta(days=serial)
+        except (ValueError, AttributeError):
+            for fmt in ('%Y/%m/%d', '%Y-%m-%d', '%Y年%m月%d日'):
+                try:
+                    exec_date = pd.Timestamp(datetime.strptime(date_raw.strip(), fmt))
+                    break
+                except Exception:
+                    pass
+
+        # 時刻パース
+        exec_time = None
+        try:
+            parts = time_raw.strip().split(':')
+            if len(parts) >= 2:
+                exec_time = dt_time(int(parts[0]), int(parts[1]),
+                                    int(parts[2]) if len(parts) > 2 else 0)
+        except Exception:
+            pass
+
+        exec_dt = None
+        if exec_date is not None and exec_time is not None:
+            try:
+                exec_dt = pd.Timestamp.combine(exec_date.date(), exec_time)
+            except Exception:
+                pass
+
+        recs.append({
+            '注文番号':   order_no,
+            '注文種別':   order_type,
+            '銘柄名':     brand,
+            '銘柄コード': code,
+            '取引':       trade,
+            '注文株数':   exec_qty,
+            '執行条件':   exec_cond,
+            '注文単価':   order_price,
+            '約定株数':   exec_qty,
+            '約定単価':   exec_price_val,
+            '約定日時':   exec_dt,
+            '_注文状況':  status,
+            '_base_row':  base + 1,
+        })
+        r = base + 1
+
+    out = pd.DataFrame(recs)
+    if not out.empty:
+        for col in ['注文株数', '注文単価', '約定株数', '約定単価']:
+            if col in out.columns:
+                out[col] = pd.to_numeric(out[col], errors='coerce')
+        if '約定日時' in out.columns:
+            out['約定日時'] = pd.to_datetime(out['約定日時'], errors='coerce')
+    return out
+
+
+def run_daytrade_paste(source_name: str, text: str) -> DaytradeImportResult:
+    try:
+        df_raw = parse_daytrade_tsv(text)
+    except Exception as e:
+        raise ValueError(f"テキストのパースに失敗しました: {e}")
+
+    df_clean = drop_unwanted(df_raw)
+    trips = build_round_trips(df_clean)
+
+    if not trips:
+        return DaytradeImportResult(
+            filename=source_name, parsed=0, inserted=0, skipped=0, total_pnl=0.0,
+            warnings=["ラウンドトリップが0件でした（貼り付け内容を確認してください）"],
+        )
+
+    now = datetime.now()
+    for t in trips:
+        t["source_file"] = source_name
+        t["imported_at"] = now
+
+    conn = mysql.connector.connect(**get_db_config())
+    cursor = conn.cursor()
+    try:
+        cursor.executemany(_INSERT_SQL, trips)
+        inserted = cursor.rowcount
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        cursor.close()
+        conn.close()
+
+    return DaytradeImportResult(
+        filename=source_name,
+        parsed=len(trips),
+        inserted=inserted,
+        skipped=len(trips) - inserted,
+        total_pnl=round(sum(t["pnl"] for t in trips), 2),
+    )
+
+
+# ---------------------------------------------------------------------------
 # MySQL 挿入
 # ---------------------------------------------------------------------------
 

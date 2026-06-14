@@ -163,6 +163,7 @@
   <div class="tabs">
     <div class="tab active" onclick="switchTab('csv')">特定口座 CSV</div>
     <div class="tab" onclick="switchTab('daytrade')">デイトレ xlsx</div>
+    <div class="tab" onclick="switchTab('paste')">デイトレ コピペ</div>
   </div>
 
   <!-- CSV tab -->
@@ -190,6 +191,16 @@
         <div class="file-name" id="dtFileName"></div>
       </div>
       <button type="submit" class="btn" id="dtSubmitBtn" disabled>取込開始</button>
+    </form>
+  </div>
+
+  <!-- Paste tab -->
+  <div class="tab-panel" id="panel-paste">
+    <p class="sub">SBI証券の注文照会画面をコピーしてそのまま貼り付けてください</p>
+    <form method="post" action="/upload/daytrade/paste" enctype="application/x-www-form-urlencoded" id="pasteForm">
+      <input type="text" name="filename" placeholder="識別名（例: 20260611）" style="width:100%;padding:8px;background:#1e2025;border:1px solid #2c2f33;border-radius:4px;color:#d8d9da;font-size:13px;margin-bottom:10px;">
+      <textarea name="text" id="pasteArea" rows="8" placeholder="ここにCtrl+V（Cmd+V）で貼り付け" style="width:100%;padding:10px;background:#1e2025;border:2px dashed #3a3d42;border-radius:6px;color:#d8d9da;font-size:12px;font-family:monospace;resize:vertical;" required></textarea>
+      <button type="submit" class="btn" id="pasteBtn" disabled>取込開始</button>
     </form>
   </div>
 
@@ -256,11 +267,21 @@
   setupDropZone('dropZone',   'fileInput',   'fileName',   'submitBtn', 'uploadForm');
   setupDropZone('dtDropZone', 'dtFileInput', 'dtFileName', 'dtSubmitBtn', 'dtForm');
 
+  // コピペタブ: テキストがあれば送信ボタン有効化
+  const pasteArea = document.getElementById('pasteArea');
+  const pasteBtn = document.getElementById('pasteBtn');
+  pasteArea.addEventListener('input', () => { pasteBtn.disabled = !pasteArea.value.trim(); });
+  document.getElementById('pasteForm').addEventListener('submit', () => { pasteBtn.disabled = true; pasteBtn.textContent = '取込中...'; });
+
   function switchTab(tab) {
-    document.querySelectorAll('.tab').forEach((t, i) => t.classList.toggle('active', (i === 0) === (tab === 'csv')));
-    document.getElementById('panel-csv').classList.toggle('active', tab === 'csv');
-    document.getElementById('panel-daytrade').classList.toggle('active', tab === 'daytrade');
+    const tabs = ['csv', 'daytrade', 'paste'];
+    document.querySelectorAll('.tab').forEach((t, i) => t.classList.toggle('active', tabs[i] === tab));
+    tabs.forEach(t => document.getElementById('panel-' + t).classList.toggle('active', t === tab));
   }
+
+  // ページロード時にアクティブタブを復元
+  const activeTab = "{{ active_tab | default('csv') }}";
+  if (activeTab !== 'csv') switchTab(activeTab);
 </script>
 </body>
 </html>
