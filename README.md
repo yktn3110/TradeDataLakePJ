@@ -120,17 +120,17 @@ Grafana ダッシュボード上部の「CSVアップロード」リンク、ま
 
 ### DBマイグレーション
 
-テーブル構造の変更は `mysql/migrations/` 以下に番号付きSQLファイルで管理しています。
+テーブル構造の変更は `schema/migrations/` 以下に番号付きSQLファイルで管理しています。
 `git pull` 後に新しいマイグレーションファイルがあれば順番に実行してください。
 
 ```bash
 # 例: 001番を適用
-docker exec trade_mysql mysql -u tradeuser -ptradepass tradedb < mysql/migrations/001_add_fx_trades.sql
+docker exec trade_mysql mysql -u tradeuser -ptradepass tradedb < schema/migrations/001_add_fx_trades.sql
 ```
 
 | ファイル | 内容 |
 |---|---|
-| 001_add_fx_trades.sql | FXトレードテーブル追加 |
+| schema/migrations/001_add_fx_trades.sql | FXトレードテーブル追加 |
 
 ### ログ確認
 
