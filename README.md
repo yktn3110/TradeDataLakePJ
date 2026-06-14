@@ -77,7 +77,12 @@ copy .env.example .env  # Windows
 docker compose up -d
 ```
 
-Windows の場合は `start.bat` をダブルクリックするだけでも起動できます。
+- **Windows**: `start.bat` をダブルクリック
+- **Mac**: ターミナルで以下を実行（初回のみ）
+  ```bash
+  chmod +x start.sh
+  ./start.sh
+  ```
 
 ### 停止
 
@@ -95,10 +100,22 @@ docker compose down
 
 ### データ投入
 
-Grafana の「CSVアップロード」リンクから:
+Grafana ダッシュボード上部の「CSVアップロード」リンク、または http://localhost:8000 からアップロードします。
 
-- **SBI証券 特定口座損益CSV** → `/upload` で `trades` テーブルに取込
-- **デイトレExcelエクスポートxlsx** → `/upload/daytrade` で `daytrades` テーブルに取込
+#### SBI証券 特定口座損益CSV → `trades` テーブル
+
+1. SBI証券のサイトにログイン
+2. **口座管理 → 取引履歴 → 特定口座損益明細** を開く
+3. 期間を指定してCSVダウンロード（ファイル名例: `SaveFile_000001_000088.csv`）
+4. アップロード画面の「特定口座 CSV」タブからアップロード
+
+#### デイトレ記録 xlsx → `daytrades` テーブル
+
+1. SBI証券の**注文照会画面**からExcelエクスポート
+2. アップロード画面の「デイトレ xlsx」タブからアップロード
+3. ファイル内に「元データ」シートが必要（なければ最初のシートを使用）
+
+> 同じファイルを2回アップロードしても重複登録されません。
 
 ### ログ確認
 
