@@ -164,6 +164,7 @@
     <div class="tab active" onclick="switchTab('csv')">特定口座 CSV</div>
     <div class="tab" onclick="switchTab('daytrade')">デイトレ xlsx</div>
     <div class="tab" onclick="switchTab('paste')">デイトレ コピペ</div>
+    <div class="tab" onclick="switchTab('fx')">FX</div>
   </div>
 
   <!-- CSV tab -->
@@ -201,6 +202,23 @@
       <input type="text" name="filename" placeholder="識別名（例: 20260611）" style="width:100%;padding:8px;background:#1e2025;border:1px solid #2c2f33;border-radius:4px;color:#d8d9da;font-size:13px;margin-bottom:10px;">
       <textarea name="text" id="pasteArea" rows="8" placeholder="ここにCtrl+V（Cmd+V）で貼り付け" style="width:100%;padding:10px;background:#1e2025;border:2px dashed #3a3d42;border-radius:6px;color:#d8d9da;font-size:12px;font-family:monospace;resize:vertical;" required></textarea>
       <button type="submit" class="btn" id="pasteBtn" disabled>取込開始</button>
+    </form>
+  </div>
+
+  <!-- FX tab -->
+  <div class="tab-panel" id="panel-fx">
+    <p class="sub">FXトレード記録CSVをアップロードしてください</p>
+    <div style="background:rgba(255,152,48,0.08);border:1px solid rgba(255,152,48,0.3);border-radius:4px;padding:12px 16px;margin-bottom:16px;font-size:12px;color:#ff9830;">
+      ⚠ FX取込機能は現在準備中です。対応業者・フォーマットが決まり次第実装されます。
+    </div>
+    <form method="post" action="/upload/fx" enctype="multipart/form-data" id="fxForm">
+      <div class="drop-zone" id="fxDropZone" style="opacity:0.5;pointer-events:none;">
+        <input type="file" name="file" accept=".csv" id="fxFileInput" required disabled>
+        <div class="drop-icon">📈</div>
+        <div class="drop-label">FX業者のCSVをドロップ、または<span>クリックして選択</span></div>
+        <div class="file-name" id="fxFileName"></div>
+      </div>
+      <button type="submit" class="btn" disabled style="opacity:0.5;">準備中</button>
     </form>
   </div>
 
@@ -274,7 +292,7 @@
   document.getElementById('pasteForm').addEventListener('submit', () => { pasteBtn.disabled = true; pasteBtn.textContent = '取込中...'; });
 
   function switchTab(tab) {
-    const tabs = ['csv', 'daytrade', 'paste'];
+    const tabs = ['csv', 'daytrade', 'paste', 'fx'];
     document.querySelectorAll('.tab').forEach((t, i) => t.classList.toggle('active', tabs[i] === tab));
     tabs.forEach(t => document.getElementById('panel-' + t).classList.toggle('active', t === tab));
   }
