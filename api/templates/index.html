@@ -169,6 +169,7 @@
   <!-- CSV tab -->
   <div class="tab-panel active" id="panel-csv">
     <p class="sub">SBI証券 特定口座損益明細CSV をアップロードしてください</p>
+    <p class="sub">CSVの取得方法：SBI証券のPCサイトにログイン後、「口座管理」→「取引履歴」→「譲渡益税明細」を開き、期間を指定してCSVをダウンロードしてください。</p>
     <form method="post" action="/upload" enctype="multipart/form-data" id="uploadForm">
       <div class="drop-zone" id="dropZone">
         <input type="file" name="file" accept=".csv" id="fileInput" required>
